@@ -16,8 +16,10 @@ export default function Lobby() {
   const { 
     getPopularNow, 
     getActiveTokens, 
-    walletConnected, 
-    setWalletConnected,
+    walletConnected,
+    connectWallet,
+    disconnectWallet,
+    userAddress,
     globalPNLTier 
   } = useMockData();
   
@@ -53,7 +55,7 @@ export default function Lobby() {
               </Button>
             </Link>
             <Button 
-              onClick={() => setWalletConnected(!walletConnected)}
+              onClick={walletConnected ? disconnectWallet : connectWallet}
               className={cn(
                 "px-4 py-2 rounded-full font-medium text-xs transition-all whitespace-nowrap",
                 walletConnected 
@@ -61,7 +63,7 @@ export default function Lobby() {
                   : "bg-gray-800 hover:bg-gray-700 border border-gray-700"
               )}
             >
-              {walletConnected ? "已连接" : "Connect"}
+              {walletConnected ? (userAddress ? `${userAddress.slice(0, 4)}...${userAddress.slice(-4)}` : "已连接") : "Connect"}
             </Button>
           </div>
         </div>

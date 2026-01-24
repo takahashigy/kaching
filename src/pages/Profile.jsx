@@ -15,7 +15,14 @@ const DEFAULT_AVATARS = [
 ];
 
 export default function Profile() {
-  const { walletConnected, setWalletConnected, globalPNLTier, setGlobalPNLTier } = useMockData();
+  const { 
+    walletConnected,
+    connectWallet,
+    disconnectWallet,
+    userAddress,
+    globalPNLTier, 
+    setGlobalPNLTier 
+  } = useMockData();
   
   const [nickname, setNickname] = useState('匿名用户');
   const [avatar, setAvatar] = useState('🦄');
@@ -125,7 +132,8 @@ export default function Profile() {
             <Label className="text-gray-400">钱包连接</Label>
             <WalletToggle 
               isConnected={walletConnected}
-              onToggle={() => setWalletConnected(!walletConnected)}
+              onToggle={walletConnected ? disconnectWallet : connectWallet}
+              userAddress={userAddress}
             />
           </div>
 
