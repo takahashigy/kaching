@@ -67,8 +67,8 @@ export default function Search() {
       return;
     }
 
-    // 最小字符数限制：非CA需要至少2个字符
-    if (!looksLikeCA(q) && q.length < 2) {
+    // 最小字符数限制：1个字符即可触发
+    if (!looksLikeCA(q) && q.length < 1) {
       setResults([]);
       setSearched(false);
       setLoading(false);
@@ -200,7 +200,7 @@ export default function Search() {
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="输入至少 2 个字符开始搜索..."
+          placeholder="输入关键词开始搜索..."
           className="pl-10 pr-10 bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
