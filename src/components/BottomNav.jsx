@@ -1,0 +1,49 @@
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { cn } from "@/lib/utils";
+import { Home, Trophy, Star, Bookmark } from 'lucide-react';
+
+const navItems = [
+  { name: "Lobby", icon: Home, label: "大厅" },
+  { name: "PurpleRanking", icon: Trophy, label: "紫榜", color: "text-purple-400" },
+  { name: "GoldFeatured", icon: Star, label: "金榜", color: "text-amber-400" },
+  { name: "Watchlist", icon: Bookmark, label: "关注" }
+];
+
+export default function BottomNav() {
+  const location = useLocation();
+  const currentPath = location.pathname.replace('/', '');
+  
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-50">
+      <div className="bg-gray-900/95 backdrop-blur-xl border-t border-gray-800">
+        <div className="max-w-md mx-auto flex justify-around items-center h-16 px-2">
+          {navItems.map(({ name, icon: Icon, label, color }) => {
+            const isActive = currentPath === name || (currentPath === '' && name === 'Lobby');
+            return (
+              <Link
+                key={name}
+                to={createPageUrl(name)}
+                className={cn(
+                  "flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-all",
+                  isActive 
+                    ? "bg-gray-800 text-white" 
+                    : "text-gray-500 hover:text-gray-300"
+                )}
+              >
+                <Icon className={cn(
+                  "w-5 h-5 mb-1",
+                  isActive && color
+                )} />
+                <span className="text-[10px] font-medium">{label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+      {/* Safe area spacer */}
+      <div className="h-safe-area-inset-bottom bg-gray-900" />
+    </nav>
+  );
+}
