@@ -42,7 +42,7 @@ export default function Room() {
     walletConnected,
     userAddress,
     userHolding,
-    updateUserHolding,
+    updateUserHoldingForToken,
     setUserHolding,
     globalPNLTier,
     watchlist,
@@ -77,7 +77,7 @@ export default function Room() {
         return;
       }
       try {
-        await updateUserHolding(ca);
+        await updateUserHoldingForToken(ca);
         // 测试：如果持仓为0，自动设置1%方便测试连麦
         if (!cancelled) {
           setTimeout(() => {
@@ -92,7 +92,7 @@ export default function Room() {
 
     run();
     return () => { cancelled = true; };
-  }, [walletConnected, token?.contractAddress, updateUserHolding, setUserHolding]);
+  }, [walletConnected, token?.contractAddress, updateUserHoldingForToken, setUserHolding]);
 
   const handleCopyCA = () => {
     if (token?.contractAddress) {
