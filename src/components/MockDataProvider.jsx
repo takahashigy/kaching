@@ -119,6 +119,10 @@ function mapRoomToToken(room, index = 0) {
     swaps5m,
   });
 
+  // 存活时长（分钟）和冻结次数
+  const aliveMinutes = Number(room?.aliveMinutes ?? 0);
+  const freezeCount = Number(room?.freezeCount ?? 0);
+
   return {
     id: tokenAddress ? `token-${tokenAddress}` : `token-${index}`,
     roomId:
@@ -151,6 +155,10 @@ function mapRoomToToken(room, index = 0) {
     listeners,
     joinVelocity,
     speakersCount,
+
+    // 历史数据
+    aliveMinutes,
+    freezeCount,
 
     // ranking score placeholder (set later)
     popularityScore: 0,
@@ -222,6 +230,11 @@ const MockDataContext = createContext(null);
 
 export function MockDataProvider({ children }) {
   const [tokens, setTokens] = useState([]);
+  const [stats, setStats] = useState({
+    newRoomsToday: 0,
+    frozenRoomsToday: 0,
+    totalActive: 0
+  });
 
   /* ----------------------------- */
   /* Wallet state (REAL)           */
@@ -264,6 +277,14 @@ export function MockDataProvider({ children }) {
       }));
 
       setTokens(withScores);
+      
+      // 更新统计数据
+      setStats({
+        newRoomsToday: data?.stats?.newRoomsToday ?? 0,
+        frozenRoomsToday: data?.stats?.frozenRoomsToday ?? 0,
+        totalActive: withScores.filter(t => t.state === 'ACTIVE').length
+      });
+      
       setLoading(false);
     } catch (err) {
       console.error("Failed to load rooms", err);
@@ -539,6 +560,7 @@ export function MockDataProvider({ children }) {
   const value = {
     // data
     tokens,
+    stats,
     loading,
     lastError,
 

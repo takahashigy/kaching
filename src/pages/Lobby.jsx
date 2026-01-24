@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 export default function Lobby() {
   const { 
     getPopularNow, 
-    getActiveTokens, 
+    getActiveTokens,
+    stats,
     walletConnected,
     toggleWallet,
     userAddress,
@@ -40,11 +41,23 @@ export default function Lobby() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between min-w-0">
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-1">
               模音
             </h1>
             <p className="text-gray-400 text-sm">当 Meme 长了嘴巴</p>
+
+            {/* 统计数据 */}
+            <div className="flex gap-4 mt-2 text-xs">
+              <div className="flex items-center gap-1">
+                <span className="text-emerald-400">+{stats.newRoomsToday}</span>
+                <span className="text-gray-500">新增</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-cyan-400">{stats.frozenRoomsToday}</span>
+                <span className="text-gray-500">冻结</span>
+              </div>
+            </div>
           </div>
           
           <div className="flex items-center gap-2 shrink-0">
