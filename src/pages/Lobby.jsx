@@ -26,10 +26,10 @@ export default function Lobby() {
   const globalTitle = getGlobalTitle(globalPNLTier);
 
   return (
-    <div className="max-w-md mx-auto px-4 py-6">
+    <div className="max-w-md mx-auto px-4 py-6 overflow-x-hidden">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between min-w-0">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-1">
               模音
@@ -37,7 +37,7 @@ export default function Lobby() {
             <p className="text-gray-400 text-sm">当 Meme 长了嘴巴</p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             <Link to={createPageUrl('Search')}>
               <Button variant="ghost" size="icon" className="h-10 w-10 hover:bg-gray-800/50">
                 <Search className="w-5 h-5" />
@@ -46,20 +46,20 @@ export default function Lobby() {
             <Button 
               onClick={() => setWalletConnected(!walletConnected)}
               className={cn(
-                "px-5 py-2 rounded-full font-medium text-sm transition-all",
+                "px-4 py-2 rounded-full font-medium text-xs transition-all whitespace-nowrap",
                 walletConnected 
                   ? "bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700" 
                   : "bg-gray-800 hover:bg-gray-700 border border-gray-700"
               )}
             >
-              {walletConnected ? "已连接" : "Connect Wallet"}
+              {walletConnected ? "已连接" : "Connect"}
             </Button>
           </div>
         </div>
       </div>
 
       {/* Popular Now Section - Carousel */}
-      <section className="mb-8">
+      <section className="mb-8 -mx-4 px-4 overflow-x-hidden">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
             <WaveformIcon color="cyan" animate />

@@ -43,7 +43,7 @@ export default function Layout({ children }) {
         </div>
         
         {/* Main content */}
-        <main className="relative pb-20">
+        <main className="relative pb-20 overflow-x-hidden">
           {children}
         </main>
         
