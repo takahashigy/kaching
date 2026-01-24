@@ -291,6 +291,9 @@ export function MockDataProvider({ children }) {
   /* ----------------------------- */
 
   const connectWallet = useCallback(async () => {
+    console.log("🔗 connectWallet called");
+    console.log("🔍 isWalletAvailable:", isWalletAvailable());
+    
     if (!isWalletAvailable()) {
       // 预览环境测试模式
       const testMode = window.confirm(
@@ -304,23 +307,27 @@ export function MockDataProvider({ children }) {
         const mockAddr = "0x1234567890123456789012345678901234567890";
         setWalletConnected(true);
         setUserAddress(mockAddr);
-        setWalletProvider(null); // mock mode, no real provider
+        setWalletProvider(null);
         console.log("🧪 测试模式：使用模拟钱包地址", mockAddr);
         return mockAddr;
       }
+      console.log("❌ 用户取消测试模式");
       return null;
     }
     try {
+      console.log("✅ 检测到钱包，尝试连接...");
       const { address, provider } = await connectWalletUtil();
       const addr = normalizeAddr(address);
 
       setWalletConnected(true);
       setUserAddress(addr);
       setWalletProvider(provider);
+      console.log("🎉 钱包连接成功:", addr);
 
       return addr;
     } catch (e) {
-      console.error("connectWallet failed", e);
+      console.error("❌ connectWallet failed", e);
+      alert("连接钱包失败: " + e.message);
       setWalletConnected(false);
       setUserAddress(null);
       setWalletProvider(null);
@@ -337,6 +344,7 @@ export function MockDataProvider({ children }) {
   }, []);
 
   const toggleWallet = useCallback(async () => {
+    console.log("🔘 toggleWallet clicked, walletConnected:", walletConnected);
     if (walletConnected) {
       disconnectWallet();
     } else {
