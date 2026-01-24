@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Search as SearchIcon, X, AlertCircle, CheckCircle2, Snowflake, ArrowRight, Loader2 } from 'lucide-react';
 import TierBadge from '@/components/TierBadge';
 
-// ✅ 改成你的 Worker 地址
 const API_BASE = "https://kaching-room-engine.zhenshi1996799.workers.dev";
 
 function shortenCA(ca) {
@@ -31,7 +30,6 @@ function StateIcon({ state }) {
 }
 
 function statusReasonFromRoom(room) {
-  // Worker 里：INACTIVE 用 statusReason，FROZEN 用 freezeReason
   if (!room) return "";
   if (room.state === "FROZEN") return room.freezeReason || "已冻结";
   if (room.state === "INACTIVE") return room.statusReason || "未达标";
@@ -44,28 +42,52 @@ export default function Search() {
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
+  
+  const abortControllerRef = useRef(null);
+  const debounceTimerRef = useRef(null);
 
   const countText = useMemo(() => {
     if (!searched) return "";
     return `找到 ${results.length} 个结果`;
   }, [searched, results.length]);
 
-  const handleSearch = async () => {
-    const q = query.trim();
+  const performSearch = async (q) => {
+    // 取消上一次请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     setErrorText('');
     setSearched(true);
 
     if (!q) {
       setResults([]);
       setSearched(false);
+      setLoading(false);
+      return;
+    }
+
+    // 最小字符数限制：非CA需要至少2个字符
+    if (!looksLikeCA(q) && q.length < 2) {
+      setResults([]);
+      setSearched(false);
+      setLoading(false);
       return;
     }
 
     setLoading(true);
 
+    // 创建新的 AbortController
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      // 1) 拉全量 rooms（你目前追踪 tokens 数量不大，这个最省事）
-      const res = await fetch(`${API_BASE}/rooms/all`, { method: "GET" });
+      // 1) 拉全量 rooms
+      const res = await fetch(`${API_BASE}/rooms/all`, { 
+        method: "GET",
+        signal: controller.signal 
+      });
+      
       if (!res.ok) throw new Error(`rooms/all HTTP ${res.status}`);
       const data = await res.json();
       const rooms = Array.isArray(data?.rooms) ? data.rooms : [];
@@ -78,15 +100,17 @@ export default function Search() {
         return name.includes(needle) || symbol.includes(needle) || ca.includes(needle);
       });
 
-      // 2) 如果没找到且像 CA，则额外查 status（可显示未达标原因/冻结原因）
+      // 2) 如果没找到且像 CA，则额外查 status
       if (filtered.length === 0 && looksLikeCA(q)) {
         const ca = normalize(q);
-        const r2 = await fetch(`${API_BASE}/token/status?ca=${ca}`, { method: "GET" });
+        const r2 = await fetch(`${API_BASE}/token/status?ca=${ca}`, { 
+          method: "GET",
+          signal: controller.signal 
+        });
+        
         if (r2.ok) {
           const one = await r2.json();
-          // one 可能是“尚未初始化”，也能展示出来
           setResults([{
-            // 统一成页面渲染需要的字段
             id: one.roomId || ca,
             tokenAddress: one.tokenAddress || ca,
             name: one.meta?.name || "",
@@ -104,18 +128,62 @@ export default function Search() {
         setResults(filtered);
       }
     } catch (e) {
+      if (e.name === 'AbortError') {
+        // 请求被取消，不做处理
+        return;
+      }
       setErrorText("搜索失败：后端接口请求异常（请稍后重试）");
       setResults([]);
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   };
+
+  // 实时搜索 + 防抖
+  useEffect(() => {
+    const q = query.trim();
+    
+    // 清除之前的定时器
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (!q) {
+      setResults([]);
+      setSearched(false);
+      setLoading(false);
+      return;
+    }
+
+    // 防抖：400ms
+    setLoading(true);
+    debounceTimerRef.current = setTimeout(() => {
+      performSearch(q);
+    }, 400);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [query]);
 
   const handleClear = () => {
     setQuery('');
     setResults([]);
     setSearched(false);
     setErrorText('');
+    setLoading(false);
+    
+    // 取消进行中的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
   };
 
   return (
@@ -157,7 +225,10 @@ export default function Search() {
           )}
 
           {loading ? (
-            <p className="text-gray-400 text-sm">搜索中…</p>
+            <div className="flex items-center gap-2 text-gray-400 text-sm py-4">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>搜索中…</span>
+            </div>
           ) : (
             <>
               {searched && (
@@ -180,7 +251,6 @@ export default function Search() {
                     >
                       {/* Token info */}
                       <div className="flex items-start gap-3 mb-3">
-                        {/* ✅ 头像：优先 logo，没有就用 symbol 前两位 */}
                         <div className={cn(
                           "w-12 h-12 rounded-xl overflow-hidden border border-gray-700/60",
                           "flex items-center justify-center text-lg font-bold",
@@ -237,7 +307,6 @@ export default function Search() {
                         </div>
 
                         {state === "ACTIVE" ? (
-                          // ✅ 用 ca 跳转（更适配真实后端）
                           <Link to={createPageUrl(`Room?ca=${normalize(ca)}`)}>
                             <Button size="sm" className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700">
                               进入房间
