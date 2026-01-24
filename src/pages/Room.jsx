@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMockData } from '@/components/MockDataProvider';
 import TierBadge from '@/components/TierBadge';
 import StateBadge from '@/components/StateBadge';
@@ -39,8 +39,10 @@ export default function Room() {
   const { 
     getToken,
     tokens,
-    walletConnected, 
-    userHolding, 
+    walletConnected,
+    userAddress,
+    userHolding,
+    updateUserHolding,
     setUserHolding,
     globalPNLTier,
     watchlist,
@@ -59,6 +61,18 @@ export default function Room() {
   
   const [showSettings, setShowSettings] = useState(false);
   const [copiedCA, setCopiedCA] = useState(false);
+
+  // Update user holding when wallet is connected and token changes
+  useEffect(() => {
+    if (walletConnected && token?.contractAddress) {
+      updateUserHolding(token.contractAddress);
+    } else {
+      // Reset holding if wallet disconnected or no token
+      if (!walletConnected) {
+        updateUserHolding(null);
+      }
+    }
+  }, [walletConnected, token?.contractAddress, updateUserHolding]);
 
   const handleCopyCA = () => {
     if (token?.contractAddress) {

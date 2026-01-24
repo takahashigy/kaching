@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { connectWallet as connectBrowserWallet, getUserTokenHolding, onAccountsChanged, onChainChanged, isWalletAvailable } from '@/utils/walletUtils';
 
 /**
  * Live data source (Cloudflare Worker)
@@ -193,9 +194,11 @@ const MockDataContext = createContext(null);
 export function MockDataProvider({ children }) {
   const [tokens, setTokens] = useState([]);
 
-  // You said PNL can be removed for MVP — keep these as placeholders for UI toggles
+  // Real wallet state
   const [walletConnected, setWalletConnected] = useState(false);
-  const [userHolding, setUserHolding] = useState(0.3);
+  const [userAddress, setUserAddress] = useState(null);
+  const [walletProvider, setWalletProvider] = useState(null);
+  const [userHolding, setUserHolding] = useState(0);
   const [globalPNLTier, setGlobalPNLTier] = useState("Elite");
 
   const [watchlist, setWatchlist] = useState([]);
@@ -205,6 +208,77 @@ export function MockDataProvider({ children }) {
   const [lastError, setLastError] = useState(null);
 
   const pollTimerRef = useRef(null);
+
+  /**
+   * Connect to browser wallet
+   */
+  const connectWallet = useCallback(async () => {
+    if (!isWalletAvailable()) {
+      console.warn('No browser wallet detected. Please install MetaMask, OKX, or Rabby.');
+      return;
+    }
+
+    try {
+      const { address, provider } = await connectBrowserWallet();
+      setUserAddress(address);
+      setWalletProvider(provider);
+      setWalletConnected(true);
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
+    }
+  }, []);
+
+  /**
+   * Disconnect wallet
+   */
+  const disconnectWallet = useCallback(() => {
+    setUserAddress(null);
+    setWalletProvider(null);
+    setWalletConnected(false);
+    setUserHolding(0);
+  }, []);
+
+  /**
+   * Update user holding for a specific token
+   */
+  const updateUserHolding = useCallback(async (tokenAddress) => {
+    if (!walletConnected || !userAddress || !walletProvider || !tokenAddress) {
+      setUserHolding(0);
+      return;
+    }
+
+    try {
+      const holding = await getUserTokenHolding(tokenAddress, userAddress, walletProvider);
+      setUserHolding(holding);
+    } catch (error) {
+      console.error('Failed to update user holding:', error);
+      setUserHolding(0);
+    }
+  }, [walletConnected, userAddress, walletProvider]);
+
+  /**
+   * Listen to wallet account changes
+   */
+  useEffect(() => {
+    const unsubscribe1 = onAccountsChanged((newAddress) => {
+      if (newAddress) {
+        setUserAddress(newAddress);
+        setWalletConnected(true);
+      } else {
+        disconnectWallet();
+      }
+    });
+
+    const unsubscribe2 = onChainChanged(() => {
+      // Reload on chain change
+      window.location.reload();
+    });
+
+    return () => {
+      unsubscribe1();
+      unsubscribe2();
+    };
+  }, [disconnectWallet]);
 
   /**
    * Load active rooms from backend
@@ -364,11 +438,15 @@ export function MockDataProvider({ children }) {
     loading,
     lastError,
 
-    // wallet placeholders
+    // wallet (real)
     walletConnected,
-    setWalletConnected,
+    userAddress,
+    walletProvider,
+    connectWallet,
+    disconnectWallet,
     userHolding,
-    setUserHolding,
+    updateUserHolding,
+    setUserHolding, // Keep for testing/compatibility
     globalPNLTier,
     setGlobalPNLTier,
 
