@@ -39,8 +39,11 @@ export default function LiveKitRoom({
 
       const data = await response.json();
       
+      console.log('🎤 LiveKit token response:', { ok: response.ok, status: response.status, data });
+      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to get token');
+        console.error('❌ Token request failed:', data);
+        throw new Error(data.error || data.message || 'Failed to get token');
       }
 
       const { token, wsUrl, canPublish: canPub } = data;
