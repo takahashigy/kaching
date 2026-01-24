@@ -15,7 +15,9 @@ import {
   ArrowUpDown,
   Bookmark,
   BookmarkCheck,
-  Share2
+  Share2,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -56,6 +58,15 @@ export default function Room() {
   const isWatched = actualTokenId ? watchlist.includes(actualTokenId) : false;
   
   const [showSettings, setShowSettings] = useState(false);
+  const [copiedCA, setCopiedCA] = useState(false);
+
+  const handleCopyCA = () => {
+    if (token?.contractAddress) {
+      navigator.clipboard.writeText(token.contractAddress);
+      setCopiedCA(true);
+      setTimeout(() => setCopiedCA(false), 2000);
+    }
+  };
   
   if (!token) {
     return (
@@ -157,6 +168,23 @@ export default function Room() {
                 </div>
                 <p className="text-gray-400 text-sm">{token.name}</p>
                 <StateBadge state={token.state} />
+                {token.contractAddress && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-gray-500 font-mono">
+                      CA: {token.contractAddress.slice(0, 8)}...{token.contractAddress.slice(-6)}
+                    </span>
+                    <button
+                      onClick={handleCopyCA}
+                      className="p-1 hover:bg-gray-700/50 rounded transition-colors"
+                    >
+                      {copiedCA ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             

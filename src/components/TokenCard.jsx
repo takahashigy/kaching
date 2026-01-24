@@ -5,9 +5,11 @@ import { cn } from "@/lib/utils";
 import TierBadge from './TierBadge';
 import LiveBadge from './LiveBadge';
 import WaveformIcon from './WaveformIcon';
+import { Copy, Check } from 'lucide-react';
 
 export default function TokenCard({ token, rank, showRank = false }) {
   const [imgOk, setImgOk] = React.useState(true);
+  const [copied, setCopied] = React.useState(false);
 
   const logoSrc =
     token?.logo ||
@@ -18,6 +20,22 @@ export default function TokenCard({ token, rank, showRank = false }) {
     null;
 
   const showImage = Boolean(logoSrc) && imgOk;
+
+  const handleCopyCA = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ca = token?.contractAddress;
+    if (ca) {
+      navigator.clipboard.writeText(ca);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const shortenCA = (addr) => {
+    if (!addr) return '';
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   return (
     <Link to={createPageUrl(`Room?id=${token.id}`)} className="block w-full">
@@ -93,9 +111,27 @@ export default function TokenCard({ token, rank, showRank = false }) {
             {token?.state === "ACTIVE" && (
               <LiveBadge />
             )}
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
+
+            {token?.contractAddress && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <span className="text-[10px] text-gray-500 font-mono">
+                  {shortenCA(token.contractAddress)}
+                </span>
+                <button
+                  onClick={handleCopyCA}
+                  className="text-gray-500 hover:text-cyan-400 transition-colors"
+                >
+                  {copied ? (
+                    <Check className="w-3 h-3 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
+                </button>
+              </div>
+            )}
+            </div>
+            </div>
+            </div>
+            </Link>
+            );
+            }
