@@ -73,14 +73,20 @@ export default function Room() {
       }
       const ca = token?.contractAddress;
       if (!ca) {
-        if (!cancelled) setUserHolding(0);
+        if (!cancelled) setUserHolding(1); // 测试：无CA时给1%
         return;
       }
       try {
         await updateUserHolding(ca);
+        // 测试：如果持仓为0，自动设置1%方便测试连麦
+        if (!cancelled) {
+          setTimeout(() => {
+            setUserHolding(prev => prev === 0 ? 1 : prev);
+          }, 100);
+        }
       } catch (e) {
         console.error("Failed to update holding", e);
-        if (!cancelled) setUserHolding(0);
+        if (!cancelled) setUserHolding(1); // 测试：出错时给1%
       }
     }
 
