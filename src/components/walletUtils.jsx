@@ -26,25 +26,28 @@ export async function getChainIdHex() {
   }
 }
 
+/**
+ * Ensure user is on BSC chain (56 / 0x38)
+ * trySwitch=true: attempt wallet_switchEthereumChain
+ */
 export async function ensureBscChain({ trySwitch = true } = {}) {
   const chainId = await getChainIdHex();
   if (!chainId) return { ok: false, reason: "NO_WALLET" };
 
-  if (chainId.toLowerCase() === BSC_CHAIN_ID_HEX) return { ok: true };
+  if (String(chainId).toLowerCase() === BSC_CHAIN_ID_HEX) return { ok: true };
 
-  // 如果你不想自动切换，就返回错误让 UI 提示
   if (!trySwitch) return { ok: false, reason: "WRONG_CHAIN", chainId };
 
-  // 尝试切到 BSC
   try {
     await window.ethereum.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: BSC_CHAIN_ID_HEX }],
     });
-    return { ok: true };
+    return { ok: true, switched: true };
   } catch (e) {
-    // 有些钱包没添加 BSC，会报 4902，需要 addChain
+    // 4902: chain not added
     if (e?.code === 4902) {
+      // try add BSC
       try {
         await window.ethereum.request({
           method: "wallet_addEthereumChain",
@@ -58,30 +61,32 @@ export async function ensureBscChain({ trySwitch = true } = {}) {
             },
           ],
         });
-        return { ok: true };
+        return { ok: true, added: true };
       } catch (e2) {
         return { ok: false, reason: "ADD_CHAIN_FAILED", error: e2 };
       }
     }
-    return { ok: false, reason: "SWITCH_CHAIN_FAILED", error: e };
+    return { ok: false, reason: "SWITCH_CHAIN_FAILED", error: e, chainId };
   }
 }
 
 /**
  * Connect to browser wallet (MetaMask / OKX / Rabby etc.)
- * @returns {Promise<{address: string, provider: ethers.BrowserProvider, signer: ethers.Signer}>}
+ * Returns: { address, provider, signer }
  */
-export async function connectWallet() {
+export async function connectWallet({ requireBsc = true, trySwitch = true } = {}) {
   if (!isWalletAvailable()) {
-    console.warn("No browser wallet detected. Please install MetaMask, OKX, or Rabby.");
-    throw new Error("No wallet available");
+    throw new Error("NO_WALLET");
   }
 
-  // 先确保在 BSC（你只做 BSC meme）
-  const bsc = await ensureBscChain({ trySwitch: true });
-  if (!bsc.ok) {
-    console.warn("Not on BSC chain:", bsc);
-    throw new Error("Wrong chain (please switch to BSC)");
+  if (requireBsc) {
+    const ok = await ensureBscChain({ trySwitch });
+    if (!ok?.ok) {
+      const r = ok?.reason || "WRONG_CHAIN";
+      const err = new Error(r);
+      err.detail = ok;
+      throw err;
+    }
   }
 
   const provider = new ethers.BrowserProvider(window.ethereum);
@@ -96,43 +101,38 @@ export async function connectWallet() {
 }
 
 /**
- * Get user's token holding percentage
- * NOTE: 必须避免 BigInt -> Number 溢出
- * @returns {Promise<{sharePercent:number, balance:string, totalSupply:string, decimals:number}>}
+ * BigInt safe percent = balance/totalSupply * 100
+ * Return number (0-100, can exceed 100 if token broken but generally 0-100)
+ *
+ * NOTE: We don't need decimals for percentage, but we try fetch it anyway for better compatibility.
  */
 export async function getUserTokenHolding(tokenAddress, userAddress, provider) {
-  if (!tokenAddress || !userAddress || !provider) {
-    return { sharePercent: 0, balance: "0", totalSupply: "0", decimals: 18 };
-  }
+  if (!tokenAddress || !userAddress || !provider) return 0;
 
   try {
     const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
 
-    const [balanceRaw, totalSupplyRaw, decimals] = await Promise.all([
+    const [balance, totalSupply] = await Promise.all([
       contract.balanceOf(userAddress),
       contract.totalSupply(),
-      contract.decimals(),
     ]);
 
-    // totalSupplyRaw/balanceRaw are BigInt
-    if (totalSupplyRaw === 0n) {
-      return { sharePercent: 0, balance: "0", totalSupply: "0", decimals: Number(decimals) };
-    }
+    // balance & totalSupply are BigInt in ethers v6
+    if (!totalSupply || totalSupply === 0n) return 0;
 
-    // 用 BigInt 做比例，避免溢出：share% = balance/total *100
-    // 先放大 1e6 保留 6 位小数
+    // Use scaled integer math to keep precision: percent * 10000 (basis points)
+    // shareBps = balance * 1_000_000 / totalSupply  (because 100% = 1_000_000 bps? no)
+    // We'll use 1e6 as "micro-percent" (0.0001%) then convert.
     const SCALE = 1_000_000n;
-    const shareScaled = (balanceRaw * 100n * SCALE) / totalSupplyRaw;
-    const sharePercent = Number(shareScaled) / Number(SCALE);
+    const microPercent = (balance * 100n * SCALE) / totalSupply; // percent * 1e6
+    const percent = Number(microPercent) / Number(SCALE);
 
-    // 这些展示值可选
-    const balance = ethers.formatUnits(balanceRaw, decimals);
-    const totalSupply = ethers.formatUnits(totalSupplyRaw, decimals);
-
-    return { sharePercent, balance, totalSupply, decimals: Number(decimals) };
+    // clamp to [0, 100] just in case
+    if (!Number.isFinite(percent) || percent < 0) return 0;
+    return percent > 100 ? 100 : percent;
   } catch (error) {
     console.error("Failed to read token holding:", error);
-    return { sharePercent: 0, balance: "0", totalSupply: "0", decimals: 18 };
+    return 0;
   }
 }
 
@@ -142,10 +142,15 @@ export async function getUserTokenHolding(tokenAddress, userAddress, provider) {
 export function onAccountsChanged(callback) {
   if (!isWalletAvailable()) return () => {};
 
-  const handler = (accounts) => callback(accounts?.[0] || null);
+  const handler = (accounts) => {
+    callback(accounts?.[0] || null);
+  };
 
   window.ethereum.on("accountsChanged", handler);
-  return () => window.ethereum.removeListener("accountsChanged", handler);
+
+  return () => {
+    window.ethereum.removeListener("accountsChanged", handler);
+  };
 }
 
 /**
@@ -157,5 +162,9 @@ export function onChainChanged(callback) {
   const handler = (chainId) => callback(chainId);
 
   window.ethereum.on("chainChanged", handler);
-  return () => window.ethereum.removeListener("chainChanged", handler);
+
+  return () => {
+    window.ethereum.removeListener("chainChanged", handler);
+  };
 }
+
