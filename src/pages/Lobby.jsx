@@ -101,7 +101,7 @@ export default function Lobby() {
           </div>
         </div>
         
-        <div className="grid gap-3">
+        <div className="grid gap-2.5">
           {activeTokens.map(token => (
             <TokenCard key={token.id} token={token} />
           ))}

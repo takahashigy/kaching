@@ -20,10 +20,10 @@ export default function TokenCard({ token, rank, showRank = false }) {
   const showImage = Boolean(logoSrc) && imgOk;
 
   return (
-    <Link to={createPageUrl(`Room?id=${token.id}`)}>
+    <Link to={createPageUrl(`Room?id=${token.id}`)} className="block w-full">
       <div
         className={cn(
-          "relative w-full max-w-full p-4 rounded-2xl border transition-all duration-300 overflow-hidden",
+          "relative w-full max-w-[420px] mx-auto p-3 rounded-2xl border transition-all duration-300 overflow-hidden",
           "bg-gradient-to-br from-[#1a1f3a]/80 to-[#0f1229]/50",
           "border-gray-700/50 hover:border-gray-600",
           "backdrop-blur-xl hover:scale-[1.02]",
@@ -52,11 +52,11 @@ export default function TokenCard({ token, rank, showRank = false }) {
           </div>
         )}
 
-        <div className="relative flex items-start gap-3 min-w-0">
+        <div className="relative flex items-start gap-2.5 min-w-0">
           {/* Token avatar */}
           <div
             className={cn(
-              "w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-lg font-bold border-2 shrink-0",
+              "w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center text-base font-bold border-2 shrink-0",
               "bg-gradient-to-br shadow-lg",
               token.tier === "GOLD"
                 ? "from-amber-500/30 to-orange-600/30 text-amber-400 border-amber-500/50"
@@ -79,19 +79,19 @@ export default function TokenCard({ token, rank, showRank = false }) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 min-w-0">
-              <span className="font-bold text-white text-lg truncate">
+            <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
+              <span className="font-bold text-white text-base truncate">
                 ${token?.ticker || token?.symbol || "?"}
               </span>
-              <TierBadge tier={token?.tier} />
+              <TierBadge tier={token?.tier} size="sm" />
             </div>
 
-            <p className="text-gray-400 text-xs truncate mb-2">
+            <p className="text-gray-400 text-xs truncate mb-1.5">
               {token?.name || ""}
             </p>
 
             {token?.state === "ACTIVE" && (
-              <LiveBadge className="mb-2" />
+              <LiveBadge />
             )}
           </div>
         </div>
