@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { connectWallet as connectBrowserWallet, getUserTokenHolding, onAccountsChanged, onChainChanged, isWalletAvailable } from '@/utils/walletUtils';
+import { connectWallet as connectBrowserWallet, getUserTokenHolding, onAccountsChanged, onChainChanged, isWalletAvailable } from './walletUtils';
 
 /**
  * Live data source (Cloudflare Worker)
