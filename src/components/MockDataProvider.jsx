@@ -1,169 +1,263 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
-function generateCA(ticker) {
-  const chars = '0123456789abcdef';
-  let ca = '0x';
-  const seed = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  for (let i = 0; i < 40; i++) {
-    ca += chars[(seed * (i + 1)) % chars.length];
-  }
-  return ca;
+/**
+ * Live data source (Cloudflare Worker)
+ */
+const API_BASE = "https://kaching-room-engine.zhenshi1996799.workers.dev";
+
+/**
+ * Small helpers
+ */
+function normalizeAddr(s = "") {
+  return String(s || "").trim().toLowerCase();
 }
 
-const MOCK_TOKENS_BASE = [
-  { name: "Pepe Classic", ticker: "PEPE", marketCap: 2500000, liquidityUSD: 85000, volume4m: 12000, swaps4m: 45, holders: 3200, listeners: 156, joinVelocity: 12 },
-  { name: "Doge Moon", ticker: "DMOON", marketCap: 890000, liquidityUSD: 42000, volume4m: 8500, swaps4m: 32, holders: 1800, listeners: 89, joinVelocity: 8 },
-  { name: "Shiba Army", ticker: "SARMY", marketCap: 650000, liquidityUSD: 28000, volume4m: 5600, swaps4m: 25, holders: 1200, listeners: 67, joinVelocity: 6 },
-  { name: "Cat Coin", ticker: "CATC", marketCap: 480000, liquidityUSD: 22000, volume4m: 4200, swaps4m: 22, holders: 890, listeners: 45, joinVelocity: 5 },
-  { name: "Frog Finance", ticker: "FROG", marketCap: 320000, liquidityUSD: 18000, volume4m: 3800, swaps4m: 28, holders: 720, listeners: 38, joinVelocity: 4 },
-  { name: "Moon Rabbit", ticker: "MRAB", marketCap: 180000, liquidityUSD: 15000, volume4m: 3200, swaps4m: 21, holders: 560, listeners: 28, joinVelocity: 3 },
-  { name: "Ape Together", ticker: "APET", marketCap: 95000, liquidityUSD: 12000, volume4m: 2800, swaps4m: 18, holders: 420, listeners: 22, joinVelocity: 2 },
-  { name: "Diamond Hands", ticker: "DHND", marketCap: 72000, liquidityUSD: 11000, volume4m: 3500, swaps4m: 24, holders: 380, listeners: 18, joinVelocity: 2 },
-  { name: "Rocket Token", ticker: "RCKT", marketCap: 55000, liquidityUSD: 10500, volume4m: 3100, swaps4m: 22, holders: 310, listeners: 15, joinVelocity: 1 },
-  { name: "Bull Run", ticker: "BULL", marketCap: 48000, liquidityUSD: 10200, volume4m: 3300, swaps4m: 25, holders: 280, listeners: 12, joinVelocity: 1 },
-  { name: "Bear Market", ticker: "BEAR", marketCap: 42000, liquidityUSD: 8000, volume4m: 2500, swaps4m: 15, holders: 220, listeners: 8, joinVelocity: 1 },
-  { name: "Whale Alert", ticker: "WHALE", marketCap: 38000, liquidityUSD: 7500, volume4m: 2200, swaps4m: 12, holders: 180, listeners: 6, joinVelocity: 0 },
-  { name: "Pump It", ticker: "PUMP", marketCap: 30000, liquidityUSD: 5000, volume4m: 1800, swaps4m: 8, holders: 150, listeners: 0, joinVelocity: 0 },
-  { name: "Dump Token", ticker: "DUMP", marketCap: 22000, liquidityUSD: 3000, volume4m: 800, swaps4m: 5, holders: 90, listeners: 0, joinVelocity: 0 },
-  { name: "Rug Pull", ticker: "RUG", marketCap: 15000, liquidityUSD: 2000, volume4m: 500, swaps4m: 3, holders: 50, listeners: 0, joinVelocity: 0 }
-];
-
-function getTier(marketCap) {
-  if (marketCap >= 1000000) return "GOLD";
-  if (marketCap >= 444444) return "PURPLE";
-  return "BLUE";
+function isEvmAddress(s = "") {
+  const x = normalizeAddr(s);
+  return x.startsWith("0x") && x.length === 42;
 }
 
-function getState(token, sustainedMinutes = 5) {
-  const meetsCreation = 
-    token.marketCap >= 44444 &&
-    token.liquidityUSD >= 10000 &&
-    (token.swaps4m >= 20 || token.volume4m >= 3000);
-  
-  if (meetsCreation && sustainedMinutes >= 4) {
-    return "ACTIVE";
-  }
-  
-  if (token.marketCap < 44444 && sustainedMinutes >= 7) {
-    return "FROZEN";
-  }
-  
-  if (token.state === "ACTIVE") return "ACTIVE";
-  if (token.state === "FROZEN") return "FROZEN";
-  
-  return "INACTIVE";
+/**
+ * The backend already gives tier/state, but keep fallback:
+ */
+function tierFromMarketCap(marketCap) {
+  const mc = Number(marketCap);
+  if (!Number.isFinite(mc)) return null;
+  if (mc >= 1000000) return "GOLD";
+  if (mc >= 444444) return "PURPLE";
+  if (mc >= 44444) return "BLUE";
+  return null;
+}
+
+/**
+ * Because backend (MVP) does not provide listeners/joinVelocity/speakersCount yet,
+ * we derive "good enough" proxies from volume/swaps to keep UI ranking/carousel alive.
+ *
+ * Later: replace these with real RTC room stats.
+ */
+function deriveSocialSignals({ marketCap, volume5m, swaps5m }) {
+  const mc = Number(marketCap) || 0;
+  const vol = Number(volume5m) || 0;
+  const swaps = Number(swaps5m) || 0;
+
+  // listeners: influenced by activity + size
+  const listeners = Math.max(
+    0,
+    Math.floor((Math.log10(mc + 10) * 18) + (vol / 1200) + (swaps * 0.8))
+  );
+
+  // join velocity: more dependent on swaps/short-term volume
+  const joinVelocity = Math.max(
+    0,
+    Math.floor((swaps / 3) + (vol / 6000))
+  );
+
+  const speakersCount = Math.max(0, Math.min(8, Math.floor(listeners / 80)));
+
+  return { listeners, joinVelocity, speakersCount };
 }
 
 function calculatePopularityScore(token, allTokens) {
-  const maxListeners = Math.max(...allTokens.map(t => t.listeners || 1));
-  const maxVelocity = Math.max(...allTokens.map(t => t.joinVelocity || 1));
-  
+  const maxListeners = Math.max(...allTokens.map(t => t.listeners || 1), 1);
+  const maxVelocity = Math.max(...allTokens.map(t => t.joinVelocity || 1), 1);
+
   const normalizedListeners = (token.listeners || 0) / maxListeners;
   const normalizedVelocity = (token.joinVelocity || 0) / maxVelocity;
-  
+
   return 0.7 * normalizedListeners + 0.3 * normalizedVelocity;
 }
 
 function calculatePurpleRankingScore(token, allPurple) {
-  const maxMarketCap = Math.max(...allPurple.map(t => t.marketCap || 1));
-  const maxVolume = Math.max(...allPurple.map(t => t.volume4m || 1));
-  const maxListeners = Math.max(...allPurple.map(t => t.listeners || 1));
-  
+  const maxMarketCap = Math.max(...allPurple.map(t => t.marketCap || 1), 1);
+  const maxVolume = Math.max(...allPurple.map(t => t.volume4m || 1), 1);
+  const maxListeners = Math.max(...allPurple.map(t => t.listeners || 1), 1);
+
   return (
-    0.5 * (token.marketCap / maxMarketCap) +
-    0.3 * ((token.volume4m || 0) / maxVolume) +
-    0.2 * ((token.listeners || 0) / maxListeners)
+    0.5 * ((token.marketCap || 0) / maxMarketCap) +
+    0.3 * (((token.volume4m || 0) / maxVolume)) +
+    0.2 * (((token.listeners || 0) / maxListeners))
   );
+}
+
+/**
+ * Map backend "room card" => app token shape
+ * Backend /rooms/active returns: { rooms: [{ tokenAddress, roomId, state, tier, name, symbol, logo, marketCap, liquidityUSD, volume5m, swaps5m, updatedAt }], count }
+ */
+function mapRoomToToken(room, index = 0) {
+  const tokenAddress = normalizeAddr(room?.tokenAddress || room?.token || room?.contractAddress || "");
+  const name = room?.name || "";
+  const symbol = room?.symbol || room?.ticker || "";
+
+  const marketCap = Number(room?.marketCap ?? null);
+  const liquidityUSD = Number(room?.liquidityUSD ?? null);
+  const volume5m = Number(room?.volume5m ?? 0);
+  const swaps5m = Number(room?.swaps5m ?? 0);
+
+  const { listeners, joinVelocity, speakersCount } = deriveSocialSignals({ marketCap, volume5m, swaps5m });
+
+  return {
+    id: tokenAddress ? `token-${tokenAddress}` : `token-${index}`,
+    roomId: room?.roomId || (tokenAddress ? `bsc:${tokenAddress}` : `bsc:unknown-${index}`),
+
+    // keep original app fields
+    name,
+    ticker: symbol,                 // UI里若用 ticker，这里兼容
+    symbol,                         // UI里若改为 symbol，也可用
+    contractAddress: tokenAddress,  // UI里叫 contractAddress
+    logo: room?.logo || null,
+
+    // metrics
+    marketCap: Number.isFinite(marketCap) ? marketCap : null,
+    liquidityUSD: Number.isFinite(liquidityUSD) ? liquidityUSD : null,
+
+    // your mock used 4m; backend provides 5m -> keep both
+    volume4m: volume5m,
+    swaps4m: swaps5m,
+    volume5m,
+    swaps5m,
+
+    // state/tier
+    state: room?.state || "INACTIVE",
+    tier: room?.tier || tierFromMarketCap(marketCap),
+
+    // social proxy
+    holders: null, // MVP没提供，先留空
+    listeners,
+    joinVelocity,
+    speakersCount,
+
+    // ranking score placeholder (set later)
+    popularityScore: 0,
+
+    updatedAt: room?.updatedAt || null,
+
+    // if backend later returns these in rooms list, we keep them
+    statusReason: room?.statusReason ?? null,
+    freezeReason: room?.freezeReason ?? null,
+  };
+}
+
+/**
+ * Map backend /token/status => app token shape
+ * Backend returns:
+ * { tokenAddress, state, tier, aboveCount, belowCount, statusReason, freezeReason, metrics: {marketCap, liquidityUSD, volume5m, swaps5m}, meta: {name, symbol, logo}, roomId, updatedAt }
+ */
+function mapStatusToToken(statusObj) {
+  const tokenAddress = normalizeAddr(statusObj?.tokenAddress || "");
+  const marketCap = Number(statusObj?.metrics?.marketCap ?? null);
+  const liquidityUSD = Number(statusObj?.metrics?.liquidityUSD ?? null);
+  const volume5m = Number(statusObj?.metrics?.volume5m ?? 0);
+  const swaps5m = Number(statusObj?.metrics?.swaps5m ?? 0);
+
+  const { listeners, joinVelocity, speakersCount } = deriveSocialSignals({ marketCap, volume5m, swaps5m });
+
+  // approximate "sustained minutes" using aboveCount (cron is 1 minute in your backend MVP)
+  const aboveCount = Number(statusObj?.aboveCount ?? 0);
+  const sustainedMinutes = Math.max(0, aboveCount); // 1 count ~= 1 minute
+
+  return {
+    id: tokenAddress ? `token-${tokenAddress}` : `token-${Math.random().toString(16).slice(2)}`,
+    roomId: statusObj?.roomId || (tokenAddress ? `bsc:${tokenAddress}` : "bsc:unknown"),
+    name: statusObj?.meta?.name || "",
+    ticker: statusObj?.meta?.symbol || "",
+    symbol: statusObj?.meta?.symbol || "",
+    contractAddress: tokenAddress,
+    logo: statusObj?.meta?.logo || null,
+
+    marketCap: Number.isFinite(marketCap) ? marketCap : null,
+    liquidityUSD: Number.isFinite(liquidityUSD) ? liquidityUSD : null,
+
+    volume4m: volume5m,
+    swaps4m: swaps5m,
+    volume5m,
+    swaps5m,
+
+    state: statusObj?.state || "INACTIVE",
+    tier: statusObj?.tier || tierFromMarketCap(marketCap),
+
+    listeners,
+    joinVelocity,
+    speakersCount,
+    sustainedMinutes,
+
+    popularityScore: 0,
+    updatedAt: statusObj?.updatedAt || null,
+
+    statusReason: statusObj?.statusReason ?? null,
+    freezeReason: statusObj?.freezeReason ?? null,
+  };
 }
 
 const MockDataContext = createContext(null);
 
 export function MockDataProvider({ children }) {
   const [tokens, setTokens] = useState([]);
+
+  // You said PNL can be removed for MVP — keep these as placeholders for UI toggles
   const [walletConnected, setWalletConnected] = useState(false);
   const [userHolding, setUserHolding] = useState(0.3);
   const [globalPNLTier, setGlobalPNLTier] = useState("Elite");
+
   const [watchlist, setWatchlist] = useState([]);
 
-  // Initialize tokens
-  useEffect(() => {
-    const initialTokens = MOCK_TOKENS_BASE.map((t, i) => {
-      const sustainedMinutes = Math.floor(Math.random() * 10) + 4;
-      const tier = getTier(t.marketCap);
-      const state = getState({ ...t, state: "INACTIVE" }, sustainedMinutes);
-      return {
+  // Optional: expose loading/error for UI
+  const [loading, setLoading] = useState(true);
+  const [lastError, setLastError] = useState(null);
+
+  const pollTimerRef = useRef(null);
+
+  /**
+   * Load active rooms from backend
+   */
+  const loadRooms = useCallback(async () => {
+    try {
+      setLastError(null);
+
+      const res = await fetch(`${API_BASE}/rooms/active`);
+      const data = await res.json();
+
+      const rooms = Array.isArray(data?.rooms) ? data.rooms : [];
+      const mapped = rooms.map((r, i) => mapRoomToToken(r, i));
+
+      // compute popularity score
+      const withScores = mapped.map(t => ({
         ...t,
-        id: `token-${i}`,
-        contractAddress: generateCA(t.ticker),
-        tier,
-        state: state === "INACTIVE" && t.marketCap >= 44444 ? "ACTIVE" : state,
-        sustainedMinutes,
-        speakersCount: Math.floor(Math.random() * 5),
-        popularityScore: 0
-      };
-    });
-    
-    // Calculate popularity scores
-    const withScores = initialTokens.map(t => ({
-      ...t,
-      popularityScore: calculatePopularityScore(t, initialTokens)
-    }));
-    
-    setTokens(withScores);
+        popularityScore: calculatePopularityScore(t, mapped),
+      }));
+
+      setTokens(withScores);
+      setLoading(false);
+    } catch (err) {
+      console.error("Failed to load rooms", err);
+      setLastError("Failed to load rooms");
+      setLoading(false);
+    }
   }, []);
 
-  // Simulate market changes every 10-20 seconds
+  /**
+   * Initialize + polling refresh
+   */
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTokens(prev => {
-        const updated = prev.map(token => {
-          // Random market cap change (-10% to +15%)
-          const change = 1 + (Math.random() * 0.25 - 0.1);
-          const newMarketCap = Math.floor(token.marketCap * change);
-          
-          // Random listener changes
-          const listenerChange = Math.floor(Math.random() * 10) - 3;
-          const newListeners = Math.max(0, (token.listeners || 0) + listenerChange);
-          
-          // Random velocity
-          const newVelocity = Math.max(0, Math.floor(Math.random() * 15));
-          
-          // Update sustained minutes
-          const newSustained = token.sustainedMinutes + 1;
-          
-          const newTier = getTier(newMarketCap);
-          const newState = getState({ ...token, marketCap: newMarketCap }, newSustained);
-          
-          return {
-            ...token,
-            marketCap: newMarketCap,
-            listeners: newListeners,
-            joinVelocity: newVelocity,
-            tier: newTier,
-            state: newState,
-            sustainedMinutes: newSustained,
-            speakersCount: Math.floor(Math.random() * 5)
-          };
-        });
-        
-        // Recalculate popularity scores
-        return updated.map(t => ({
-          ...t,
-          popularityScore: calculatePopularityScore(t, updated)
-        }));
-      });
-    }, 15000); // Every 15 seconds
-    
-    return () => clearInterval(interval);
-  }, []);
+    loadRooms();
 
+    // refresh every 20s (feel free to change)
+    pollTimerRef.current = setInterval(loadRooms, 20_000);
+
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, [loadRooms]);
+
+  /**
+   * Derived selectors (same as before)
+   */
   const getActiveTokens = useCallback(() => {
     return tokens.filter(t => t.state === "ACTIVE");
   }, [tokens]);
 
   const getPopularNow = useCallback(() => {
     return getActiveTokens()
-      .sort((a, b) => b.popularityScore - a.popularityScore)
+      .sort((a, b) => (b.popularityScore || 0) - (a.popularityScore || 0))
       .slice(0, 10);
   }, [getActiveTokens]);
 
@@ -171,13 +265,13 @@ export function MockDataProvider({ children }) {
     const purple = tokens.filter(t => t.tier === "PURPLE" && t.state === "ACTIVE");
     return purple
       .map(t => ({ ...t, rankScore: calculatePurpleRankingScore(t, purple) }))
-      .sort((a, b) => b.rankScore - a.rankScore);
+      .sort((a, b) => (b.rankScore || 0) - (a.rankScore || 0));
   }, [tokens]);
 
   const getGoldFeatured = useCallback(() => {
     return tokens
       .filter(t => t.tier === "GOLD" && t.state === "ACTIVE")
-      .sort((a, b) => b.marketCap - a.marketCap);
+      .sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
   }, [tokens]);
 
   const getToken = useCallback((id) => {
@@ -185,7 +279,7 @@ export function MockDataProvider({ children }) {
   }, [tokens]);
 
   const toggleWatchlist = useCallback((tokenId) => {
-    setWatchlist(prev => 
+    setWatchlist(prev =>
       prev.includes(tokenId)
         ? prev.filter(id => id !== tokenId)
         : [...prev, tokenId]
@@ -196,47 +290,108 @@ export function MockDataProvider({ children }) {
     return tokens.filter(t => watchlist.includes(t.id));
   }, [tokens, watchlist]);
 
-  const searchTokens = useCallback((query) => {
+  /**
+   * Search:
+   * - If query is CA (0x..42): call backend /token/status and return a single mapped token (even if inactive/frozen)
+   * - Else: local search over currently loaded tokens (active rooms list)
+   */
+  const searchTokens = useCallback(async (query) => {
     if (!query) return [];
-    const q = query.toLowerCase().trim();
-    return tokens.filter(t => 
-      t.name.toLowerCase().includes(q) ||
-      t.ticker.toLowerCase().includes(q) ||
-      t.contractAddress?.toLowerCase().includes(q)
+    const q = String(query).trim();
+
+    // CA search (remote)
+    if (isEvmAddress(q)) {
+      try {
+        const res = await fetch(`${API_BASE}/token/status?ca=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        // backend may return {error:...}
+        if (data?.error) return [];
+
+        const t = mapStatusToToken(data);
+        // keep scoring compatible
+        const withScore = { ...t, popularityScore: calculatePopularityScore(t, [t]) };
+        return [withScore];
+      } catch (err) {
+        console.error("searchTokens remote failed", err);
+        return [];
+      }
+    }
+
+    // local fuzzy search
+    const lower = q.toLowerCase();
+    return tokens.filter(t =>
+      (t.name || "").toLowerCase().includes(lower) ||
+      (t.ticker || "").toLowerCase().includes(lower) ||
+      (t.symbol || "").toLowerCase().includes(lower) ||
+      (t.contractAddress || "").toLowerCase().includes(lower)
     );
   }, [tokens]);
 
+  /**
+   * Status reason:
+   * - Prefer backend-provided statusReason/freezeReason
+   * - Fallback to local rules if missing
+   */
   const getStatusReason = useCallback((token) => {
+    if (!token) return null;
+
     if (token.state === "ACTIVE") return null;
-    if (token.state === "FROZEN") return token.freezeReason || "市值低于 44,444";
-    
-    // INACTIVE reasons
+
+    if (token.state === "FROZEN") {
+      return token.freezeReason || "已冻结：市值低于 44,444";
+    }
+
+    // INACTIVE
+    if (token.statusReason) return token.statusReason;
+
     const reasons = [];
-    if (token.marketCap < 44444) reasons.push("市值不足 44,444");
-    if (token.liquidityUSD < 10000) reasons.push("流动性不足 10,000");
-    if (token.swaps4m < 20 && token.volume4m < 3000) reasons.push("活跃度不足（swaps < 20 且 volume < 3000）");
-    
+    if ((token.marketCap ?? 0) < 44444) reasons.push("市值不足 44,444");
+    if ((token.liquidityUSD ?? 0) < 10000) reasons.push("流动性不足 10,000");
+    const swaps = token.swaps4m ?? token.swaps5m ?? 0;
+    const vol = token.volume4m ?? token.volume5m ?? 0;
+    if (swaps < 20 && vol < 3000) reasons.push("活跃度不足（swaps < 20 且 volume < 3000）");
+
     return reasons.length > 0 ? `未达标：${reasons.join('、')}` : "未达标";
   }, []);
 
+  /**
+   * Expose value (keep existing API shape so other components don't break)
+   */
   const value = {
+    // data
     tokens,
+    loading,
+    lastError,
+
+    // wallet placeholders
     walletConnected,
     setWalletConnected,
     userHolding,
     setUserHolding,
     globalPNLTier,
     setGlobalPNLTier,
+
+    // watchlist
     watchlist,
     toggleWatchlist,
+    getWatchlistTokens,
+
+    // selectors
     getActiveTokens,
     getPopularNow,
     getPurpleRanking,
     getGoldFeatured,
     getToken,
-    getWatchlistTokens,
+
+    // search
     searchTokens,
-    getStatusReason
+
+    // reason
+    getStatusReason,
+
+    // manual refresh hook (useful for a refresh button)
+    refresh: loadRooms,
   };
 
   return (
