@@ -6,6 +6,7 @@ import TokenCard from '@/components/TokenCard';
 import WalletToggle from '@/components/WalletToggle';
 import TierBadge from '@/components/TierBadge';
 import PopularCarousel from '@/components/PopularCarousel';
+import WaveformIcon from '@/components/WaveformIcon';
 import { getGlobalTitle } from '@/components/TitleBadge';
 import { Flame, Radio, Search, Sparkles } from 'lucide-react';
 import { cn } from "@/lib/utils";

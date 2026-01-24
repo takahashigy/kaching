@@ -1,23 +1,23 @@
-import Lobby from './pages/Lobby';
-import Room from './pages/Room';
-import PurpleRanking from './pages/PurpleRanking';
 import GoldFeatured from './pages/GoldFeatured';
-import Watchlist from './pages/Watchlist';
-import Search from './pages/Search';
+import Lobby from './pages/Lobby';
 import Profile from './pages/Profile';
+import PurpleRanking from './pages/PurpleRanking';
+import Room from './pages/Room';
+import Search from './pages/Search';
 import ShoutMode from './pages/ShoutMode';
+import Watchlist from './pages/Watchlist';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Lobby": Lobby,
-    "Room": Room,
-    "PurpleRanking": PurpleRanking,
     "GoldFeatured": GoldFeatured,
-    "Watchlist": Watchlist,
-    "Search": Search,
+    "Lobby": Lobby,
     "Profile": Profile,
+    "PurpleRanking": PurpleRanking,
+    "Room": Room,
+    "Search": Search,
     "ShoutMode": ShoutMode,
+    "Watchlist": Watchlist,
 }
 
 export const pagesConfig = {
