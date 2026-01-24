@@ -292,7 +292,22 @@ export function MockDataProvider({ children }) {
 
   const connectWallet = useCallback(async () => {
     if (!isWalletAvailable()) {
-      alert("请安装 MetaMask / OKX / Rabby 钱包（浏览器插件或钱包内置浏览器）");
+      // 预览环境测试模式
+      const testMode = window.confirm(
+        "检测到没有钱包插件。\n\n" +
+        "• 正式使用：请安装 MetaMask / OKX / Rabby 钱包\n" +
+        "• 预览测试：点击「确定」使用模拟钱包\n\n" +
+        "是否启用测试模式？"
+      );
+      
+      if (testMode) {
+        const mockAddr = "0x1234567890123456789012345678901234567890";
+        setWalletConnected(true);
+        setUserAddress(mockAddr);
+        setWalletProvider(null); // mock mode, no real provider
+        console.log("🧪 测试模式：使用模拟钱包地址", mockAddr);
+        return mockAddr;
+      }
       return null;
     }
     try {
@@ -306,7 +321,6 @@ export function MockDataProvider({ children }) {
       return addr;
     } catch (e) {
       console.error("connectWallet failed", e);
-      // 保持 UI 不崩
       setWalletConnected(false);
       setUserAddress(null);
       setWalletProvider(null);
