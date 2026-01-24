@@ -3,7 +3,7 @@ import { useMockData } from '@/components/MockDataProvider';
 import TierBadge from '@/components/TierBadge';
 import StateBadge from '@/components/StateBadge';
 import TitleBadge, { getHoldingTitle, getGlobalTitle } from '@/components/TitleBadge';
-import SpeakButton from '@/components/SpeakButton';
+import LiveKitRoom from '@/components/LiveKitRoom';
 import {
   ArrowLeft,
   Headphones,
@@ -60,6 +60,8 @@ export default function Room() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [copiedCA, setCopiedCA] = useState(false);
+  const [liveListeners, setLiveListeners] = useState(token?.listeners || 0);
+  const [liveSpeakers, setLiveSpeakers] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,11 +112,7 @@ export default function Room() {
   const holdingInfo = getHoldingTitle(userHolding);
   const globalTitle = getGlobalTitle(globalPNLTier);
 
-  const mockSpeakers = [
-    { id: 1, name: "鲸鱼大佬", holding: 5.2, isSpeaking: true },
-    { id: 2, name: "钻石手", holding: 2.1, isSpeaking: false },
-    { id: 3, name: "小韭菜", holding: 0.3, isSpeaking: false }
-  ];
+  const roomName = token?.roomId || `room-${token?.contractAddress || tokenId}`;
 
   return (
     <div className="max-w-md mx-auto">
@@ -245,7 +243,7 @@ export default function Room() {
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 text-cyan-400 mb-1">
               <Headphones className="w-5 h-5" />
-              <span className="text-2xl font-bold">{token.listeners || 0}</span>
+              <span className="text-2xl font-bold">{liveListeners}</span>
             </div>
             <p className="text-gray-500 text-xs">收听中</p>
           </div>
@@ -253,7 +251,7 @@ export default function Room() {
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 text-purple-400 mb-1">
               <Mic className="w-5 h-5" />
-              <span className="text-2xl font-bold">{mockSpeakers.filter(s => s.isSpeaking).length}</span>
+              <span className="text-2xl font-bold">{liveSpeakers}</span>
             </div>
             <p className="text-gray-500 text-xs">发言中</p>
           </div>
@@ -264,37 +262,6 @@ export default function Room() {
               <span className="text-2xl font-bold">{token.holders || 0}</span>
             </div>
             <p className="text-gray-500 text-xs">持有者</p>
-          </div>
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-sm font-medium text-gray-400 mb-3">当前发言者</h3>
-          <div className="flex flex-wrap gap-3 justify-center">
-            {mockSpeakers.map(speaker => (
-              <div
-                key={speaker.id}
-                className={cn(
-                  "flex flex-col items-center p-3 rounded-xl",
-                  speaker.isSpeaking
-                    ? "bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/30"
-                    : "bg-gray-800/50"
-                )}
-              >
-                <div className={cn(
-                  "w-12 h-12 rounded-full flex items-center justify-center mb-2 relative",
-                  "bg-gradient-to-br from-gray-700 to-gray-800"
-                )}>
-                  <span className="text-lg">{speaker.name[0]}</span>
-                  {speaker.isSpeaking && (
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center">
-                      <Mic className="w-2.5 h-2.5 text-white" />
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs font-medium truncate max-w-[60px]">{speaker.name}</p>
-                <TitleBadge holdingPercent={speaker.holding} showIcon={false} />
-              </div>
-            ))}
           </div>
         </div>
 
@@ -347,9 +314,12 @@ export default function Room() {
               )}
             </div>
 
-            <div className="flex justify-center py-4">
-              <SpeakButton holdingPercent={userHolding} />
-            </div>
+            <LiveKitRoom 
+              roomName={roomName}
+              userHoldingPercent={userHolding}
+              onParticipantCountChange={(count) => setLiveListeners(count)}
+              onSpeakingChange={(speaking) => setLiveSpeakers(speaking ? 1 : 0)}
+            />
           </div>
         ) : (
           <div className="text-center py-8 bg-gray-800/30 rounded-2xl">
@@ -361,4 +331,3 @@ export default function Room() {
     </div>
   );
 }
-
