@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import TierBadge from './TierBadge';
 import LiveBadge from './LiveBadge';
 import WaveformIcon from './WaveformIcon';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Clock, Snowflake } from 'lucide-react';
 
 export default function TokenCard({ token, rank, showRank = false }) {
   const [imgOk, setImgOk] = React.useState(true);
@@ -35,6 +35,14 @@ export default function TokenCard({ token, rank, showRank = false }) {
   const shortenCA = (addr) => {
     if (!addr) return '';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  const formatDuration = (minutes) => {
+    if (minutes < 60) return `${minutes}分钟`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}小时`;
+    const days = Math.floor(hours / 24);
+    return `${days}天`;
   };
 
   return (
@@ -129,6 +137,22 @@ export default function TokenCard({ token, rank, showRank = false }) {
                 </button>
               </div>
             )}
+
+            {/* 存活时长和冻结次数 */}
+            <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-500">
+              {token?.aliveMinutes > 0 && (
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  <span>{formatDuration(token.aliveMinutes)}</span>
+                </div>
+              )}
+              {token?.freezeCount > 0 && (
+                <div className="flex items-center gap-1">
+                  <Snowflake className="w-3 h-3 text-blue-400" />
+                  <span>冻结{token.freezeCount}次</span>
+                </div>
+              )}
+            </div>
             </div>
             </div>
             </div>
