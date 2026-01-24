@@ -5,10 +5,13 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    // 获取当前用户
-    const user = await base44.auth.me();
-    if (!user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    // 尝试获取当前用户，如果未登录则生成匿名身份
+    let user;
+    try {
+      user = await base44.auth.me();
+    } catch (err) {
+      // 未登录用户，生成匿名身份
+      user = null;
     }
 
     // 获取请求参数
@@ -30,11 +33,14 @@ Deno.serve(async (req) => {
     }
 
     // 创建 AccessToken
+    const identity = user?.email || `guest-${Math.random().toString(36).substr(2, 9)}`;
+    const name = user?.full_name || user?.email || `访客${Math.floor(Math.random() * 1000)}`;
+    
     const at = new AccessToken(apiKey, apiSecret, {
-      identity: user.email,
-      name: user.full_name || user.email,
+      identity,
+      name,
       metadata: JSON.stringify({
-        userId: user.id,
+        userId: user?.id || 'anonymous',
         holdingPercent: userHoldingPercent,
       }),
     });
@@ -56,7 +62,7 @@ Deno.serve(async (req) => {
       token,
       wsUrl,
       canPublish,
-      identity: user.email,
+      identity,
     });
 
   } catch (error) {
