@@ -27,42 +27,46 @@ export default function Lobby() {
   return (
     <div className="max-w-md mx-auto px-4 py-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-amber-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-1">
               模音
             </h1>
-            <p className="text-gray-500 text-xs mt-0.5">当 Meme 长了嘴巴</p>
+            <p className="text-gray-400 text-sm">当 Meme 长了嘴巴</p>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Link to={createPageUrl('Search')}>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
+              <Button variant="ghost" size="icon" className="h-10 w-10 hover:bg-gray-800/50">
                 <Search className="w-5 h-5" />
               </Button>
             </Link>
-            {walletConnected && (
-              <span className={cn("text-xs font-medium", globalTitle.color)}>
-                {globalTitle.title}
-              </span>
-            )}
-            <WalletToggle 
-              isConnected={walletConnected} 
-              onToggle={() => setWalletConnected(!walletConnected)} 
-            />
+            <Button 
+              onClick={() => setWalletConnected(!walletConnected)}
+              className={cn(
+                "px-5 py-2 rounded-full font-medium text-sm transition-all",
+                walletConnected 
+                  ? "bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700" 
+                  : "bg-gray-800 hover:bg-gray-700 border border-gray-700"
+              )}
+            >
+              {walletConnected ? "已连接" : "Connect Wallet"}
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Popular Now Section - Carousel */}
       <section className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500/20 to-red-500/20">
-            <Flame className="w-4 h-4 text-orange-400" />
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
+            <WaveformIcon color="cyan" animate />
           </div>
-          <h2 className="font-bold text-lg">热门房间</h2>
-          <span className="text-gray-500 text-xs">滑动浏览</span>
+          <div>
+            <h2 className="font-bold text-lg text-white">热门房间</h2>
+            <p className="text-gray-400 text-xs">Slide to browse</p>
+          </div>
         </div>
         
         {popularNow.length > 0 ? (
@@ -78,16 +82,18 @@ export default function Lobby() {
       {/* Live Rooms Section */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-cyan-500/20">
-              <Radio className="w-4 h-4 text-emerald-400" />
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center">
+              <WaveformIcon color="green" animate />
             </div>
-            <h2 className="font-bold text-lg">直播中</h2>
-            <span className="text-gray-500 text-xs">{activeTokens.length} 个房间</span>
+            <div>
+              <h2 className="font-bold text-lg text-white">直播中</h2>
+              <p className="text-gray-400 text-xs">直播中 {activeTokens.length} 个房间</p>
+            </div>
           </div>
           
           {/* Tier filters */}
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <TierBadge tier="BLUE" size="sm" />
             <TierBadge tier="PURPLE" size="sm" />
             <TierBadge tier="GOLD" size="sm" />

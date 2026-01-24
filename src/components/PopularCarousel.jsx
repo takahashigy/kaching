@@ -4,6 +4,7 @@ import { createPageUrl } from '@/utils';
 import { cn } from "@/lib/utils";
 import { Users, TrendingUp, Headphones, Zap } from 'lucide-react';
 import TierBadge from './TierBadge';
+import WaveformIcon from './WaveformIcon';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function formatNumber(num) {
@@ -152,17 +153,32 @@ export default function PopularCarousel({ tokens }) {
                     }}
                   >
                     <div className={cn(
-                      "relative w-[280px] rounded-2xl border transition-all duration-300",
-                      "bg-gradient-to-br from-gray-900/95 to-gray-800/80",
-                      "border-gray-700/50 backdrop-blur-xl",
+                      "relative w-[300px] rounded-3xl transition-all duration-300 overflow-hidden",
+                      "bg-gradient-to-br from-[#1a1f3a] to-[#0f1229]",
                       offset === 0 && "shadow-2xl",
-                      token.tier === "GOLD" && offset === 0 && "border-amber-500/40 shadow-amber-500/20",
-                      token.tier === "PURPLE" && offset === 0 && "border-purple-500/40 shadow-purple-500/20"
-                    )}>
+                      "border-2",
+                      token.tier === "GOLD" && offset === 0 && "border-amber-500/50 shadow-amber-500/30",
+                      token.tier === "PURPLE" && offset === 0 && "border-purple-500/50 shadow-purple-500/30",
+                      token.tier === "BLUE" && offset === 0 && "border-cyan-500/50 shadow-cyan-500/30"
+                    )} style={{
+                      background: offset === 0 ? (
+                        token.tier === "GOLD" ? "linear-gradient(135deg, #1a1f3a 0%, #2d1f0f 100%)" :
+                        token.tier === "PURPLE" ? "linear-gradient(135deg, #1a1f3a 0%, #2d1f2d 100%)" :
+                        "linear-gradient(135deg, #1a1f3a 0%, #0f1f2d 100%)"
+                      ) : "linear-gradient(135deg, #1a1f3a 0%, #0f1229 100%)"
+                    }}>
+                      {/* Waveform background */}
+                      <div className="absolute inset-0 opacity-10">
+                        <WaveformIcon className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-[3]" color={
+                          token.tier === "GOLD" ? "orange" :
+                          token.tier === "PURPLE" ? "purple" : "cyan"
+                        } />
+                      </div>
+                      
                       {/* Rank badge */}
                       <div className={cn(
-                        "absolute -top-3 -left-3 w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg transition-all",
-                        index === 0 ? "bg-gradient-to-br from-amber-400 to-orange-500" :
+                        "absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg transition-all z-20",
+                        index === 0 ? "bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-500/50" :
                         index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800" :
                         index === 2 ? "bg-gradient-to-br from-amber-600 to-amber-700" :
                         "bg-gradient-to-br from-cyan-500 to-purple-600"
@@ -170,43 +186,45 @@ export default function PopularCarousel({ tokens }) {
                         {index + 1}
                       </div>
                       
-                      <div className="p-5">
-                        <div className="flex items-start gap-3 mb-4">
+                      <div className="relative p-6 pt-8">
+                        {/* Token avatar and info */}
+                        <div className="flex flex-col items-center mb-6">
                           <div className={cn(
-                            "w-14 h-14 rounded-xl flex items-center justify-center text-xl font-bold",
-                            "bg-gradient-to-br",
-                            token.tier === "GOLD" ? "from-amber-500/30 to-orange-600/30 text-amber-400" :
-                            token.tier === "PURPLE" ? "from-purple-500/30 to-pink-600/30 text-purple-400" :
-                            "from-cyan-500/30 to-blue-600/30 text-cyan-400"
+                            "w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold mb-3 border-2",
+                            "bg-gradient-to-br shadow-lg",
+                            token.tier === "GOLD" ? "from-amber-500/30 to-orange-600/30 text-amber-400 border-amber-500/50 shadow-amber-500/30" :
+                            token.tier === "PURPLE" ? "from-purple-500/30 to-pink-600/30 text-purple-400 border-purple-500/50 shadow-purple-500/30" :
+                            "from-cyan-500/30 to-blue-600/30 text-cyan-400 border-cyan-500/50 shadow-cyan-500/30"
                           )}>
                             {token.ticker?.slice(0, 2)}
                           </div>
                           
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-bold text-white text-lg truncate">${token.ticker}</span>
+                          <div className="text-center">
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                              <span className="font-bold text-white text-2xl">${token.ticker}</span>
                               <TierBadge tier={token.tier} />
                             </div>
-                            <p className="text-gray-400 text-xs truncate">{token.name}</p>
+                            <p className="text-gray-400 text-sm">{token.name}</p>
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-4 gap-2 text-[10px]">
-                          <div className="flex flex-col items-center gap-1 bg-gray-800/50 rounded-lg p-2">
-                            <TrendingUp className="w-3 h-3 text-emerald-400" />
-                            <span className="text-gray-400">${formatNumber(token.marketCap)}</span>
+                        {/* Stats grid */}
+                        <div className="grid grid-cols-4 gap-3">
+                          <div className="flex flex-col items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-emerald-400" />
+                            <span className="text-white font-bold text-sm">${formatNumber(token.marketCap)}</span>
                           </div>
-                          <div className="flex flex-col items-center gap-1 bg-gray-800/50 rounded-lg p-2">
-                            <Headphones className="w-3 h-3 text-cyan-400" />
-                            <span className="text-gray-400">{token.listeners || 0}</span>
+                          <div className="flex flex-col items-center gap-2">
+                            <Headphones className="w-5 h-5 text-cyan-400" />
+                            <span className="text-white font-bold text-sm">{token.listeners || 0}</span>
                           </div>
-                          <div className="flex flex-col items-center gap-1 bg-gray-800/50 rounded-lg p-2">
-                            <Users className="w-3 h-3 text-purple-400" />
-                            <span className="text-gray-400">{token.holders || 0}</span>
+                          <div className="flex flex-col items-center gap-2">
+                            <Users className="w-5 h-5 text-purple-400" />
+                            <span className="text-white font-bold text-sm">{token.holders || 0}</span>
                           </div>
-                          <div className="flex flex-col items-center gap-1 bg-gray-800/50 rounded-lg p-2">
-                            <Zap className="w-3 h-3 text-amber-400" />
-                            <span className="text-gray-400">+{token.joinVelocity || 0}</span>
+                          <div className="flex flex-col items-center gap-2">
+                            <Zap className="w-5 h-5 text-amber-400" />
+                            <span className="text-white font-bold text-sm">+{token.joinVelocity || 0}</span>
                           </div>
                         </div>
                       </div>

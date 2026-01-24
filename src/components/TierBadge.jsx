@@ -27,10 +27,10 @@ export default function TierBadge({ tier, size = "sm" }) {
   
   return (
     <span className={cn(
-      "inline-flex items-center font-semibold border rounded-full",
+      "inline-flex items-center font-bold border-2 rounded-full uppercase tracking-wide",
       config.bg, config.border, config.text,
       `shadow-lg ${config.glow}`,
-      size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-3 py-1 text-xs"
+      size === "sm" ? "px-2.5 py-1 text-[9px]" : "px-3 py-1.5 text-xs"
     )}>
       {tier}
     </span>
