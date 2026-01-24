@@ -21,9 +21,18 @@ export default function Lobby() {
     globalPNLTier 
   } = useMockData();
   
+  const [selectedTier, setSelectedTier] = React.useState(null);
+  
   const popularNow = getPopularNow();
-  const activeTokens = getActiveTokens();
+  const allActiveTokens = getActiveTokens();
+  const activeTokens = selectedTier 
+    ? allActiveTokens.filter(token => token.tier === selectedTier)
+    : allActiveTokens;
   const globalTitle = getGlobalTitle(globalPNLTier);
+  
+  const handleTierClick = (tier) => {
+    setSelectedTier(prev => prev === tier ? null : tier);
+  };
 
   return (
     <div className="max-w-md mx-auto px-4 py-6 overflow-x-hidden">
@@ -95,9 +104,33 @@ export default function Lobby() {
           
           {/* Tier filters */}
           <div className="flex gap-2">
-            <TierBadge tier="BLUE" size="sm" />
-            <TierBadge tier="PURPLE" size="sm" />
-            <TierBadge tier="GOLD" size="sm" />
+            <button 
+              onClick={() => handleTierClick("BLUE")}
+              className={cn(
+                "transition-all",
+                selectedTier === "BLUE" ? "scale-110" : "opacity-60 hover:opacity-100"
+              )}
+            >
+              <TierBadge tier="BLUE" size="sm" />
+            </button>
+            <button 
+              onClick={() => handleTierClick("PURPLE")}
+              className={cn(
+                "transition-all",
+                selectedTier === "PURPLE" ? "scale-110" : "opacity-60 hover:opacity-100"
+              )}
+            >
+              <TierBadge tier="PURPLE" size="sm" />
+            </button>
+            <button 
+              onClick={() => handleTierClick("GOLD")}
+              className={cn(
+                "transition-all",
+                selectedTier === "GOLD" ? "scale-110" : "opacity-60 hover:opacity-100"
+              )}
+            >
+              <TierBadge tier="GOLD" size="sm" />
+            </button>
           </div>
         </div>
         
