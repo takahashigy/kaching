@@ -4,7 +4,7 @@ import { createPageUrl } from '@/utils';
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search as SearchIcon, X, AlertCircle, CheckCircle2, Snowflake, ArrowRight, Loader2 } from 'lucide-react';
+import { Search as SearchIcon, X, AlertCircle, CheckCircle2, Snowflake, ArrowRight, Loader2, Copy, Check } from 'lucide-react';
 import TierBadge from '@/components/TierBadge';
 
 const API_BASE = "https://kaching-room-engine.zhenshi1996799.workers.dev";
@@ -42,6 +42,7 @@ export default function Search() {
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
+  const [copiedCA, setCopiedCA] = useState(null);
   
   const abortControllerRef = useRef(null);
   const debounceTimerRef = useRef(null);
@@ -186,6 +187,12 @@ export default function Search() {
     }
   };
 
+  const handleCopyCA = (ca) => {
+    navigator.clipboard.writeText(ca);
+    setCopiedCA(ca);
+    setTimeout(() => setCopiedCA(null), 2000);
+  };
+
   return (
     <div className="max-w-md mx-auto px-4 py-6">
       {/* Header */}
@@ -279,9 +286,21 @@ export default function Search() {
                             {state === "ACTIVE" && tier && <TierBadge tier={tier} size="sm" />}
                           </div>
                           <p className="text-gray-400 text-sm truncate">{name}</p>
-                          <p className="text-gray-500 text-xs mt-1 font-mono">
-                            {shortenCA(ca)}
-                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-gray-500 text-xs font-mono">
+                              {shortenCA(ca)}
+                            </p>
+                            <button
+                              onClick={() => handleCopyCA(ca)}
+                              className="text-gray-500 hover:text-cyan-400 transition-colors"
+                            >
+                              {copiedCA === ca ? (
+                                <Check className="w-3 h-3 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
 

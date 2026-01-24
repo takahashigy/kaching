@@ -32,9 +32,11 @@ function formatNumber(num) {
 export default function Room() {
   const urlParams = new URLSearchParams(window.location.search);
   const tokenId = urlParams.get('id');
+  const tokenCA = urlParams.get('ca');
   
   const { 
-    getToken, 
+    getToken,
+    tokens,
     walletConnected, 
     userHolding, 
     setUserHolding,
@@ -43,8 +45,15 @@ export default function Room() {
     toggleWatchlist
   } = useMockData();
   
-  const token = getToken(tokenId);
-  const isWatched = watchlist.includes(tokenId);
+  // 支持通过 id 或 ca 查找房间
+  let token = tokenId ? getToken(tokenId) : null;
+  if (!token && tokenCA) {
+    const normalizedCA = tokenCA.toLowerCase();
+    token = tokens.find(t => t.contractAddress?.toLowerCase() === normalizedCA);
+  }
+  
+  const actualTokenId = token?.id || tokenId;
+  const isWatched = actualTokenId ? watchlist.includes(actualTokenId) : false;
   
   const [showSettings, setShowSettings] = useState(false);
   
@@ -84,8 +93,9 @@ export default function Room() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => toggleWatchlist(tokenId)}
+              onClick={() => actualTokenId && toggleWatchlist(actualTokenId)}
               className="h-9 w-9"
+              disabled={!actualTokenId}
             >
               {isWatched ? (
                 <BookmarkCheck className="w-5 h-5 text-amber-400" />
@@ -120,13 +130,24 @@ export default function Room() {
           <div className="relative">
             <div className="flex items-start gap-4 mb-4">
               <div className={cn(
-                "w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold",
+                "w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center text-2xl font-bold",
                 "bg-gradient-to-br",
                 token.tier === "GOLD" ? "from-amber-500/30 to-orange-600/30 text-amber-400" :
                 token.tier === "PURPLE" ? "from-purple-500/30 to-pink-600/30 text-purple-400" :
                 "from-cyan-500/30 to-blue-600/30 text-cyan-400"
               )}>
-                {token.ticker?.slice(0, 2)}
+                {token.logo ? (
+                  <img
+                    src={token.logo}
+                    alt={token.ticker || token.symbol || "token"}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  token.ticker?.slice(0, 2) || token.symbol?.slice(0, 2) || "??"
+                )}
               </div>
               
               <div className="flex-1">
