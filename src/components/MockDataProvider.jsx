@@ -1,5 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
+function generateCA(ticker) {
+  const chars = '0123456789abcdef';
+  let ca = '0x';
+  const seed = ticker.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  for (let i = 0; i < 40; i++) {
+    ca += chars[(seed * (i + 1)) % chars.length];
+  }
+  return ca;
+}
+
 const MOCK_TOKENS_BASE = [
   { name: "Pepe Classic", ticker: "PEPE", marketCap: 2500000, liquidityUSD: 85000, volume4m: 12000, swaps4m: 45, holders: 3200, listeners: 156, joinVelocity: 12 },
   { name: "Doge Moon", ticker: "DMOON", marketCap: 890000, liquidityUSD: 42000, volume4m: 8500, swaps4m: 32, holders: 1800, listeners: 89, joinVelocity: 8 },
@@ -84,6 +94,7 @@ export function MockDataProvider({ children }) {
       return {
         ...t,
         id: `token-${i}`,
+        contractAddress: generateCA(t.ticker),
         tier,
         state: state === "INACTIVE" && t.marketCap >= 44444 ? "ACTIVE" : state,
         sustainedMinutes,
@@ -185,6 +196,29 @@ export function MockDataProvider({ children }) {
     return tokens.filter(t => watchlist.includes(t.id));
   }, [tokens, watchlist]);
 
+  const searchTokens = useCallback((query) => {
+    if (!query) return [];
+    const q = query.toLowerCase().trim();
+    return tokens.filter(t => 
+      t.name.toLowerCase().includes(q) ||
+      t.ticker.toLowerCase().includes(q) ||
+      t.contractAddress?.toLowerCase().includes(q)
+    );
+  }, [tokens]);
+
+  const getStatusReason = useCallback((token) => {
+    if (token.state === "ACTIVE") return null;
+    if (token.state === "FROZEN") return token.freezeReason || "市值低于 44,444";
+    
+    // INACTIVE reasons
+    const reasons = [];
+    if (token.marketCap < 44444) reasons.push("市值不足 44,444");
+    if (token.liquidityUSD < 10000) reasons.push("流动性不足 10,000");
+    if (token.swaps4m < 20 && token.volume4m < 3000) reasons.push("活跃度不足（swaps < 20 且 volume < 3000）");
+    
+    return reasons.length > 0 ? `未达标：${reasons.join('、')}` : "未达标";
+  }, []);
+
   const value = {
     tokens,
     walletConnected,
@@ -200,7 +234,9 @@ export function MockDataProvider({ children }) {
     getPurpleRanking,
     getGoldFeatured,
     getToken,
-    getWatchlistTokens
+    getWatchlistTokens,
+    searchTokens,
+    getStatusReason
   };
 
   return (

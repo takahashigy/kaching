@@ -2,13 +2,14 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from "@/lib/utils";
-import { Home, Trophy, Star, Bookmark } from 'lucide-react';
+import { Home, Trophy, Star, Volume2, User } from 'lucide-react';
 
 const navItems = [
   { name: "Lobby", icon: Home, label: "大厅" },
   { name: "PurpleRanking", icon: Trophy, label: "紫榜", color: "text-purple-400" },
   { name: "GoldFeatured", icon: Star, label: "金榜", color: "text-amber-400" },
-  { name: "Watchlist", icon: Bookmark, label: "关注" }
+  { name: "ShoutMode", icon: Volume2, label: "叫了么", color: "text-pink-400" },
+  { name: "Profile", icon: User, label: "我的" }
 ];
 
 export default function BottomNav() {

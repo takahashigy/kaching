@@ -1,11 +1,15 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { useMockData } from '@/components/MockDataProvider';
 import TokenCard from '@/components/TokenCard';
 import WalletToggle from '@/components/WalletToggle';
 import TierBadge from '@/components/TierBadge';
+import PopularCarousel from '@/components/PopularCarousel';
 import { getGlobalTitle } from '@/components/TitleBadge';
-import { Flame, Radio, TrendingUp, Sparkles } from 'lucide-react';
+import { Flame, Radio, Search, Sparkles } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export default function Lobby() {
   const { 
@@ -23,52 +27,52 @@ export default function Lobby() {
   return (
     <div className="max-w-md mx-auto px-4 py-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-amber-400 bg-clip-text text-transparent">
-            模音
-          </h1>
-          <p className="text-gray-500 text-xs mt-0.5">当 Meme 长了嘴巴</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          {walletConnected && (
-            <span className={cn("text-xs font-medium", globalTitle.color)}>
-              {globalTitle.title}
-            </span>
-          )}
-          <WalletToggle 
-            isConnected={walletConnected} 
-            onToggle={() => setWalletConnected(!walletConnected)} 
-          />
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-amber-400 bg-clip-text text-transparent">
+              模音
+            </h1>
+            <p className="text-gray-500 text-xs mt-0.5">当 Meme 长了嘴巴</p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Link to={createPageUrl('Search')}>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Search className="w-5 h-5" />
+              </Button>
+            </Link>
+            {walletConnected && (
+              <span className={cn("text-xs font-medium", globalTitle.color)}>
+                {globalTitle.title}
+              </span>
+            )}
+            <WalletToggle 
+              isConnected={walletConnected} 
+              onToggle={() => setWalletConnected(!walletConnected)} 
+            />
+          </div>
         </div>
       </div>
 
-      {/* Popular Now Section */}
+      {/* Popular Now Section - Carousel */}
       <section className="mb-8">
         <div className="flex items-center gap-2 mb-4">
           <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500/20 to-red-500/20">
             <Flame className="w-4 h-4 text-orange-400" />
           </div>
           <h2 className="font-bold text-lg">热门房间</h2>
-          <span className="text-gray-500 text-xs">Top 10</span>
+          <span className="text-gray-500 text-xs">滑动浏览</span>
         </div>
         
-        {/* Horizontal scroll for top items */}
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {popularNow.slice(0, 5).map((token, index) => (
-            <div key={token.id} className="flex-shrink-0 w-[280px]">
-              <TokenCard token={token} rank={index + 1} showRank />
-            </div>
-          ))}
-        </div>
-        
-        {/* Grid for remaining */}
-        <div className="grid gap-3 mt-3">
-          {popularNow.slice(5, 10).map((token, index) => (
-            <TokenCard key={token.id} token={token} rank={index + 6} showRank />
-          ))}
-        </div>
+        {popularNow.length > 0 ? (
+          <PopularCarousel tokens={popularNow} />
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>暂无热门房间</p>
+          </div>
+        )}
       </section>
 
       {/* Live Rooms Section */}
