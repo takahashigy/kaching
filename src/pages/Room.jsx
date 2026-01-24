@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMockData } from '@/components/MockDataProvider';
 import TierBadge from '@/components/TierBadge';
 import StateBadge from '@/components/StateBadge';
 import TitleBadge, { getHoldingTitle, getGlobalTitle } from '@/components/TitleBadge';
 import SpeakButton from '@/components/SpeakButton';
-import { 
-  ArrowLeft, 
-  Headphones, 
-  Users, 
-  Mic, 
-  TrendingUp, 
+import {
+  ArrowLeft,
+  Headphones,
+  Users,
+  Mic,
+  TrendingUp,
   Droplets,
   Activity,
   ArrowUpDown,
@@ -35,44 +35,88 @@ export default function Room() {
   const urlParams = new URLSearchParams(window.location.search);
   const tokenId = urlParams.get('id');
   const tokenCA = urlParams.get('ca');
-  
-  const { 
+
+  const {
     getToken,
     tokens,
+
     walletConnected,
     userAddress,
+
     userHolding,
+    // ⚠️ Provider 里可能暴露 updateUserHoldingForToken 或 updateUserHolding
+    updateUserHoldingForToken,
     updateUserHolding,
-    setUserHolding,
+
+    setUserHolding, // 你目前还保留 slider 测试用
     globalPNLTier,
+
     watchlist,
     toggleWatchlist
   } = useMockData();
-  
+
   // 支持通过 id 或 ca 查找房间
   let token = tokenId ? getToken(tokenId) : null;
   if (!token && tokenCA) {
     const normalizedCA = tokenCA.toLowerCase();
     token = tokens.find(t => t.contractAddress?.toLowerCase() === normalizedCA);
   }
-  
+
   const actualTokenId = token?.id || tokenId;
   const isWatched = actualTokenId ? watchlist.includes(actualTokenId) : false;
-  
+
   const [showSettings, setShowSettings] = useState(false);
   const [copiedCA, setCopiedCA] = useState(false);
 
-  // Update user holding when wallet is connected and token changes
+  // ✅ 统一一个“更新持仓”的函数（兼容两种命名）
+  const doUpdateHolding = useMemo(() => {
+    if (typeof updateUserHoldingForToken === 'function') return updateUserHoldingForToken;
+    if (typeof updateUserHolding === 'function') return updateUserHolding;
+    return null;
+  }, [updateUserHoldingForToken, updateUserHolding]);
+
+  /**
+   * ✅ 当钱包连接/断开、或 token 变化时：
+   * - 连接 + 有 tokenCA => 读链计算持仓占比
+   * - 断开或无 token => 清零
+   */
   useEffect(() => {
-    if (walletConnected && token?.contractAddress) {
-      updateUserHolding(token.contractAddress);
-    } else {
-      // Reset holding if wallet disconnected or no token
+    let cancelled = false;
+
+    async function run() {
+      // wallet 未连接：直接清零（避免 UI 残留旧值）
       if (!walletConnected) {
-        updateUserHolding(null);
+        if (!cancelled) setUserHolding(0);
+        return;
+      }
+
+      // 已连接但没有 token：也清零
+      const ca = token?.contractAddress;
+      if (!ca) {
+        if (!cancelled) setUserHolding(0);
+        return;
+      }
+
+      // 没有更新函数（Provider 还没暴露）：不做任何事
+      if (!doUpdateHolding) {
+        console.warn("No updateUserHolding function exposed from MockDataProvider.");
+        return;
+      }
+
+      try {
+        await doUpdateHolding(ca);
+      } catch (e) {
+        console.error("Failed to update holding", e);
+        if (!cancelled) setUserHolding(0);
       }
     }
-  }, [walletConnected, token?.contractAddress, updateUserHolding]);
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletConnected, token?.contractAddress, doUpdateHolding, setUserHolding]);
 
   const handleCopyCA = () => {
     if (token?.contractAddress) {
@@ -81,7 +125,7 @@ export default function Room() {
       setTimeout(() => setCopiedCA(false), 2000);
     }
   };
-  
+
   if (!token) {
     return (
       <div className="max-w-md mx-auto px-4 py-6">
@@ -94,10 +138,11 @@ export default function Room() {
       </div>
     );
   }
-  
+
+  // 保留原逻辑（即使 holdingInfo 未使用也无所谓）
   const holdingInfo = getHoldingTitle(userHolding);
   const globalTitle = getGlobalTitle(globalPNLTier);
-  
+
   // Mock speakers
   const mockSpeakers = [
     { id: 1, name: "鲸鱼大佬", holding: 5.2, isSpeaking: true },
@@ -113,7 +158,7 @@ export default function Room() {
           <Link to={createPageUrl('Lobby')} className="p-2 -ml-2 rounded-lg hover:bg-gray-800">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          
+
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -151,7 +196,7 @@ export default function Room() {
             token.tier === "PURPLE" ? "bg-purple-500" :
             "bg-cyan-500"
           )} />
-          
+
           <div className="relative">
             <div className="flex items-start gap-4 mb-4">
               <div className={cn(
@@ -174,7 +219,7 @@ export default function Room() {
                   token.ticker?.slice(0, 2) || token.symbol?.slice(0, 2) || "??"
                 )}
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <h1 className="text-xl font-bold">${token.ticker}</h1>
@@ -201,7 +246,7 @@ export default function Room() {
                 )}
               </div>
             </div>
-            
+
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-gray-800/50 rounded-xl p-3">
@@ -270,10 +315,15 @@ export default function Room() {
             {mockSpeakers.map(speaker => {
               const speakerTitle = getHoldingTitle(speaker.holding);
               return (
-                <div key={speaker.id} className={cn(
-                  "flex flex-col items-center p-3 rounded-xl",
-                  speaker.isSpeaking ? "bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/30" : "bg-gray-800/50"
-                )}>
+                <div
+                  key={speaker.id}
+                  className={cn(
+                    "flex flex-col items-center p-3 rounded-xl",
+                    speaker.isSpeaking
+                      ? "bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/30"
+                      : "bg-gray-800/50"
+                  )}
+                >
                   <div className={cn(
                     "w-12 h-12 rounded-full flex items-center justify-center mb-2 relative",
                     "bg-gradient-to-br from-gray-700 to-gray-800"
@@ -305,21 +355,26 @@ export default function Room() {
                     <TitleBadge holdingPercent={userHolding} />
                     <span className={cn("text-xs", globalTitle.color)}>{globalTitle.title}</span>
                   </div>
+                  {userAddress ? (
+                    <p className="text-[10px] text-gray-500 mt-1 font-mono">
+                      {userAddress.slice(0, 6)}...{userAddress.slice(-4)}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="text-right">
                   <p className="text-gray-400 text-xs">持仓比例</p>
-                  <p className="font-bold text-lg">{userHolding.toFixed(2)}%</p>
+                  <p className="font-bold text-lg">{Number(userHolding || 0).toFixed(2)}%</p>
                 </div>
               </div>
-              
+
               {/* Mock holding slider for testing */}
-              <button 
+              <button
                 onClick={() => setShowSettings(!showSettings)}
                 className="text-cyan-400 text-xs"
               >
                 {showSettings ? '收起' : '调整持仓 (测试用)'}
               </button>
-              
+
               {showSettings && (
                 <div className="mt-3 pt-3 border-t border-gray-700">
                   <Slider
