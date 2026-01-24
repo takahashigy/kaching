@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search as SearchIcon, X, AlertCircle, CheckCircle2, Snowflake, ArrowRight } from 'lucide-react';
+import { Search as SearchIcon, X, AlertCircle, CheckCircle2, Snowflake, ArrowRight, Loader2 } from 'lucide-react';
 import TierBadge from '@/components/TierBadge';
 
 // ✅ 改成你的 Worker 地址
