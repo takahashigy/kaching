@@ -128,32 +128,24 @@ export default function Search() {
 
       {/* Search input */}
       <div className="relative mb-6">
+        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 z-10" />
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          placeholder="输入代币名称、代号或 CA..."
-          className="pr-20 bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
+          placeholder="输入至少 2 个字符开始搜索..."
+          className="pl-10 pr-10 bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500"
         />
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-          {query && (
-            <Button
-              variant="ghost"
-              size="icon"
+        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+          {loading ? (
+            <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
+          ) : query ? (
+            <button
               onClick={handleClear}
-              className="h-8 w-8 hover:bg-gray-700"
+              className="text-gray-500 hover:text-gray-300 transition-colors"
             >
               <X className="w-4 h-4" />
-            </Button>
-          )}
-          <Button
-            onClick={handleSearch}
-            size="icon"
-            disabled={loading}
-            className="h-8 w-8 bg-cyan-500 hover:bg-cyan-600"
-          >
-            <SearchIcon className="w-4 h-4" />
-          </Button>
+            </button>
+          ) : null}
         </div>
       </div>
 
