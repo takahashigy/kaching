@@ -1,5 +1,23 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { connectWallet as connectBrowserWallet, getUserTokenHolding, onAccountsChanged, onChainChanged, isWalletAvailable } from './walletUtils';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
+
+/**
+ * Wallet utils (ethers)
+ * Base44 已安装 ethers@^6.13.0，并生成了 walletUtils.js
+ */
+import {
+  isWalletAvailable,
+  connectWallet as connectWalletUtil,
+  getUserTokenHolding,
+  onAccountsChanged,
+  onChainChanged,
+} from "./walletUtils";
 
 /**
  * Live data source (Cloudflare Worker)
@@ -44,14 +62,11 @@ function deriveSocialSignals({ marketCap, volume5m, swaps5m }) {
   // listeners: influenced by activity + size
   const listeners = Math.max(
     0,
-    Math.floor((Math.log10(mc + 10) * 18) + (vol / 1200) + (swaps * 0.8))
+    Math.floor(Math.log10(mc + 10) * 18 + vol / 1200 + swaps * 0.8)
   );
 
   // join velocity: more dependent on swaps/short-term volume
-  const joinVelocity = Math.max(
-    0,
-    Math.floor((swaps / 3) + (vol / 6000))
-  );
+  const joinVelocity = Math.max(0, Math.floor(swaps / 3 + vol / 6000));
 
   const speakersCount = Math.max(0, Math.min(8, Math.floor(listeners / 80)));
 
@@ -59,8 +74,11 @@ function deriveSocialSignals({ marketCap, volume5m, swaps5m }) {
 }
 
 function calculatePopularityScore(token, allTokens) {
-  const maxListeners = Math.max(...allTokens.map(t => t.listeners || 1), 1);
-  const maxVelocity = Math.max(...allTokens.map(t => t.joinVelocity || 1), 1);
+  const maxListeners = Math.max(...allTokens.map((t) => t.listeners || 1), 1);
+  const maxVelocity = Math.max(
+    ...allTokens.map((t) => t.joinVelocity || 1),
+    1
+  );
 
   const normalizedListeners = (token.listeners || 0) / maxListeners;
   const normalizedVelocity = (token.joinVelocity || 0) / maxVelocity;
@@ -69,23 +87,24 @@ function calculatePopularityScore(token, allTokens) {
 }
 
 function calculatePurpleRankingScore(token, allPurple) {
-  const maxMarketCap = Math.max(...allPurple.map(t => t.marketCap || 1), 1);
-  const maxVolume = Math.max(...allPurple.map(t => t.volume4m || 1), 1);
-  const maxListeners = Math.max(...allPurple.map(t => t.listeners || 1), 1);
+  const maxMarketCap = Math.max(...allPurple.map((t) => t.marketCap || 1), 1);
+  const maxVolume = Math.max(...allPurple.map((t) => t.volume4m || 1), 1);
+  const maxListeners = Math.max(...allPurple.map((t) => t.listeners || 1), 1);
 
   return (
     0.5 * ((token.marketCap || 0) / maxMarketCap) +
-    0.3 * (((token.volume4m || 0) / maxVolume)) +
-    0.2 * (((token.listeners || 0) / maxListeners))
+    0.3 * ((token.volume4m || 0) / maxVolume) +
+    0.2 * ((token.listeners || 0) / maxListeners)
   );
 }
 
 /**
  * Map backend "room card" => app token shape
- * Backend /rooms/active returns: { rooms: [{ tokenAddress, roomId, state, tier, name, symbol, logo, marketCap, liquidityUSD, volume5m, swaps5m, updatedAt }], count }
  */
 function mapRoomToToken(room, index = 0) {
-  const tokenAddress = normalizeAddr(room?.tokenAddress || room?.token || room?.contractAddress || "");
+  const tokenAddress = normalizeAddr(
+    room?.tokenAddress || room?.token || room?.contractAddress || ""
+  );
   const name = room?.name || "";
   const symbol = room?.symbol || room?.ticker || "";
 
@@ -94,17 +113,23 @@ function mapRoomToToken(room, index = 0) {
   const volume5m = Number(room?.volume5m ?? 0);
   const swaps5m = Number(room?.swaps5m ?? 0);
 
-  const { listeners, joinVelocity, speakersCount } = deriveSocialSignals({ marketCap, volume5m, swaps5m });
+  const { listeners, joinVelocity, speakersCount } = deriveSocialSignals({
+    marketCap,
+    volume5m,
+    swaps5m,
+  });
 
   return {
     id: tokenAddress ? `token-${tokenAddress}` : `token-${index}`,
-    roomId: room?.roomId || (tokenAddress ? `bsc:${tokenAddress}` : `bsc:unknown-${index}`),
+    roomId:
+      room?.roomId ||
+      (tokenAddress ? `bsc:${tokenAddress}` : `bsc:unknown-${index}`),
 
     // keep original app fields
     name,
-    ticker: symbol,                 // UI里若用 ticker，这里兼容
-    symbol,                         // UI里若改为 symbol，也可用
-    contractAddress: tokenAddress,  // UI里叫 contractAddress
+    ticker: symbol, // UI里若用 ticker，这里兼容
+    symbol, // UI里若改为 symbol，也可用
+    contractAddress: tokenAddress, // UI里叫 contractAddress
     logo: room?.logo || null,
 
     // metrics
@@ -132,7 +157,7 @@ function mapRoomToToken(room, index = 0) {
 
     updatedAt: room?.updatedAt || null,
 
-    // if backend later returns these in rooms list, we keep them
+    // backend reasons
     statusReason: room?.statusReason ?? null,
     freezeReason: room?.freezeReason ?? null,
   };
@@ -140,8 +165,6 @@ function mapRoomToToken(room, index = 0) {
 
 /**
  * Map backend /token/status => app token shape
- * Backend returns:
- * { tokenAddress, state, tier, aboveCount, belowCount, statusReason, freezeReason, metrics: {marketCap, liquidityUSD, volume5m, swaps5m}, meta: {name, symbol, logo}, roomId, updatedAt }
  */
 function mapStatusToToken(statusObj) {
   const tokenAddress = normalizeAddr(statusObj?.tokenAddress || "");
@@ -150,14 +173,20 @@ function mapStatusToToken(statusObj) {
   const volume5m = Number(statusObj?.metrics?.volume5m ?? 0);
   const swaps5m = Number(statusObj?.metrics?.swaps5m ?? 0);
 
-  const { listeners, joinVelocity, speakersCount } = deriveSocialSignals({ marketCap, volume5m, swaps5m });
+  const { listeners, joinVelocity, speakersCount } = deriveSocialSignals({
+    marketCap,
+    volume5m,
+    swaps5m,
+  });
 
-  // approximate "sustained minutes" using aboveCount (cron is 1 minute in your backend MVP)
+  // approximate "sustained minutes" using aboveCount (cron is 1 minute)
   const aboveCount = Number(statusObj?.aboveCount ?? 0);
-  const sustainedMinutes = Math.max(0, aboveCount); // 1 count ~= 1 minute
+  const sustainedMinutes = Math.max(0, aboveCount);
 
   return {
-    id: tokenAddress ? `token-${tokenAddress}` : `token-${Math.random().toString(16).slice(2)}`,
+    id: tokenAddress
+      ? `token-${tokenAddress}`
+      : `token-${Math.random().toString(16).slice(2)}`,
     roomId: statusObj?.roomId || (tokenAddress ? `bsc:${tokenAddress}` : "bsc:unknown"),
     name: statusObj?.meta?.name || "",
     ticker: statusObj?.meta?.symbol || "",
@@ -194,11 +223,17 @@ const MockDataContext = createContext(null);
 export function MockDataProvider({ children }) {
   const [tokens, setTokens] = useState([]);
 
-  // Real wallet state
+  /* ----------------------------- */
+  /* Wallet state (REAL)           */
+  /* ----------------------------- */
   const [walletConnected, setWalletConnected] = useState(false);
   const [userAddress, setUserAddress] = useState(null);
   const [walletProvider, setWalletProvider] = useState(null);
+
+  // userHolding = 持仓占比 (%)，用于驱动 TitleBadge / SpeakButton
   const [userHolding, setUserHolding] = useState(0);
+
+  // You said PNL can be removed for MVP — keep placeholder for UI
   const [globalPNLTier, setGlobalPNLTier] = useState("Elite");
 
   const [watchlist, setWatchlist] = useState([]);
@@ -208,77 +243,6 @@ export function MockDataProvider({ children }) {
   const [lastError, setLastError] = useState(null);
 
   const pollTimerRef = useRef(null);
-
-  /**
-   * Connect to browser wallet
-   */
-  const connectWallet = useCallback(async () => {
-    if (!isWalletAvailable()) {
-      console.warn('No browser wallet detected. Please install MetaMask, OKX, or Rabby.');
-      return;
-    }
-
-    try {
-      const { address, provider } = await connectBrowserWallet();
-      setUserAddress(address);
-      setWalletProvider(provider);
-      setWalletConnected(true);
-    } catch (error) {
-      console.error('Failed to connect wallet:', error);
-    }
-  }, []);
-
-  /**
-   * Disconnect wallet
-   */
-  const disconnectWallet = useCallback(() => {
-    setUserAddress(null);
-    setWalletProvider(null);
-    setWalletConnected(false);
-    setUserHolding(0);
-  }, []);
-
-  /**
-   * Update user holding for a specific token
-   */
-  const updateUserHolding = useCallback(async (tokenAddress) => {
-    if (!walletConnected || !userAddress || !walletProvider || !tokenAddress) {
-      setUserHolding(0);
-      return;
-    }
-
-    try {
-      const holding = await getUserTokenHolding(tokenAddress, userAddress, walletProvider);
-      setUserHolding(holding);
-    } catch (error) {
-      console.error('Failed to update user holding:', error);
-      setUserHolding(0);
-    }
-  }, [walletConnected, userAddress, walletProvider]);
-
-  /**
-   * Listen to wallet account changes
-   */
-  useEffect(() => {
-    const unsubscribe1 = onAccountsChanged((newAddress) => {
-      if (newAddress) {
-        setUserAddress(newAddress);
-        setWalletConnected(true);
-      } else {
-        disconnectWallet();
-      }
-    });
-
-    const unsubscribe2 = onChainChanged(() => {
-      // Reload on chain change
-      window.location.reload();
-    });
-
-    return () => {
-      unsubscribe1();
-      unsubscribe2();
-    };
-  }, [disconnectWallet]);
 
   /**
    * Load active rooms from backend
@@ -294,7 +258,7 @@ export function MockDataProvider({ children }) {
       const mapped = rooms.map((r, i) => mapRoomToToken(r, i));
 
       // compute popularity score
-      const withScores = mapped.map(t => ({
+      const withScores = mapped.map((t) => ({
         ...t,
         popularityScore: calculatePopularityScore(t, mapped),
       }));
@@ -314,7 +278,7 @@ export function MockDataProvider({ children }) {
   useEffect(() => {
     loadRooms();
 
-    // refresh every 20s (feel free to change)
+    // refresh every 20s
     pollTimerRef.current = setInterval(loadRooms, 20_000);
 
     return () => {
@@ -322,11 +286,122 @@ export function MockDataProvider({ children }) {
     };
   }, [loadRooms]);
 
+  /* ----------------------------- */
+  /* Wallet actions                */
+  /* ----------------------------- */
+
+  const connectWallet = useCallback(async () => {
+    if (!isWalletAvailable()) {
+      alert("请安装 MetaMask / OKX / Rabby 钱包（浏览器插件或钱包内置浏览器）");
+      return null;
+    }
+    try {
+      const { address, provider } = await connectWalletUtil();
+      const addr = normalizeAddr(address);
+
+      setWalletConnected(true);
+      setUserAddress(addr);
+      setWalletProvider(provider);
+
+      return addr;
+    } catch (e) {
+      console.error("connectWallet failed", e);
+      // 保持 UI 不崩
+      setWalletConnected(false);
+      setUserAddress(null);
+      setWalletProvider(null);
+      return null;
+    }
+  }, []);
+
+  const disconnectWallet = useCallback(() => {
+    // Injected 钱包通常不支持真正断连：只清本地状态即可
+    setWalletConnected(false);
+    setUserAddress(null);
+    setWalletProvider(null);
+    setUserHolding(0);
+  }, []);
+
+  const toggleWallet = useCallback(async () => {
+    if (walletConnected) {
+      disconnectWallet();
+    } else {
+      await connectWallet();
+    }
+  }, [walletConnected, connectWallet, disconnectWallet]);
+
   /**
-   * Derived selectors (same as before)
+   * Listen to wallet changes:
+   * - accountsChanged: 切换账号/断开
+   * - chainChanged: 切换网络（BSC/ETH...）
    */
+  useEffect(() => {
+    if (!isWalletAvailable()) return;
+
+    const offAcc = onAccountsChanged((addr) => {
+      const a = normalizeAddr(addr || "");
+      if (!a) {
+        disconnectWallet();
+        return;
+      }
+      // 账号变了：保持 connected，但需要刷新 holding
+      setWalletConnected(true);
+      setUserAddress(a);
+      // provider 仍可用（BrowserProvider 会跟随 window.ethereum）
+      // holding 交给 Room 进入时或手动刷新去算
+      setUserHolding(0);
+    });
+
+    const offChain = onChainChanged((_chainId) => {
+      // 网络切换后：清空 holding，Room 里会重新读取
+      setUserHolding(0);
+    });
+
+    return () => {
+      offAcc?.();
+      offChain?.();
+    };
+  }, [disconnectWallet]);
+
+  /**
+   * Calculate holding% for a given token address (Room enters call this)
+   */
+  const updateUserHoldingForToken = useCallback(
+    async (tokenAddress) => {
+      const ca = normalizeAddr(tokenAddress || "");
+      if (!walletConnected || !userAddress || !walletProvider) {
+        setUserHolding(0);
+        return { sharePercent: 0 };
+      }
+      if (!isEvmAddress(ca)) {
+        setUserHolding(0);
+        return { sharePercent: 0 };
+      }
+
+      try {
+        const res = await getUserTokenHolding(ca, userAddress, walletProvider);
+        // Base44 walletUtils 可能返回 number 或 {sharePercent,...}，做兼容
+        const sharePercent =
+          typeof res === "number" ? res : Number(res?.sharePercent ?? 0);
+
+        const safe = Number.isFinite(sharePercent) ? sharePercent : 0;
+        setUserHolding(safe);
+        return { sharePercent: safe, raw: res };
+      } catch (e) {
+        console.error("updateUserHoldingForToken failed", e);
+        setUserHolding(0);
+        return { sharePercent: 0 };
+      }
+    },
+    [walletConnected, userAddress, walletProvider]
+  );
+
+  /* ----------------------------- */
+  /* Derived selectors (same as before) */
+  /* ----------------------------- */
+
   const getActiveTokens = useCallback(() => {
-    return tokens.filter(t => t.state === "ACTIVE");
+    return tokens.filter((t) => t.state === "ACTIVE");
   }, [tokens]);
 
   const getPopularNow = useCallback(() => {
@@ -336,71 +411,71 @@ export function MockDataProvider({ children }) {
   }, [getActiveTokens]);
 
   const getPurpleRanking = useCallback(() => {
-    const purple = tokens.filter(t => t.tier === "PURPLE" && t.state === "ACTIVE");
+    const purple = tokens.filter((t) => t.tier === "PURPLE" && t.state === "ACTIVE");
     return purple
-      .map(t => ({ ...t, rankScore: calculatePurpleRankingScore(t, purple) }))
+      .map((t) => ({ ...t, rankScore: calculatePurpleRankingScore(t, purple) }))
       .sort((a, b) => (b.rankScore || 0) - (a.rankScore || 0));
   }, [tokens]);
 
   const getGoldFeatured = useCallback(() => {
     return tokens
-      .filter(t => t.tier === "GOLD" && t.state === "ACTIVE")
+      .filter((t) => t.tier === "GOLD" && t.state === "ACTIVE")
       .sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
   }, [tokens]);
 
-  const getToken = useCallback((id) => {
-    return tokens.find(t => t.id === id);
-  }, [tokens]);
+  const getToken = useCallback(
+    (id) => {
+      return tokens.find((t) => t.id === id);
+    },
+    [tokens]
+  );
 
   const toggleWatchlist = useCallback((tokenId) => {
-    setWatchlist(prev =>
-      prev.includes(tokenId)
-        ? prev.filter(id => id !== tokenId)
-        : [...prev, tokenId]
+    setWatchlist((prev) =>
+      prev.includes(tokenId) ? prev.filter((id) => id !== tokenId) : [...prev, tokenId]
     );
   }, []);
 
   const getWatchlistTokens = useCallback(() => {
-    return tokens.filter(t => watchlist.includes(t.id));
+    return tokens.filter((t) => watchlist.includes(t.id));
   }, [tokens, watchlist]);
 
   /**
    * Search:
-   * - If query is CA (0x..42): call backend /token/status and return a single mapped token (even if inactive/frozen)
-   * - Else: local search over currently loaded tokens (active rooms list)
+   * - If query is CA: call backend /token/status and return one mapped token
+   * - Else: local search
    */
-  const searchTokens = useCallback(async (query) => {
-    if (!query) return [];
-    const q = String(query).trim();
+  const searchTokens = useCallback(
+    async (query) => {
+      if (!query) return [];
+      const q = String(query).trim();
 
-    // CA search (remote)
-    if (isEvmAddress(q)) {
-      try {
-        const res = await fetch(`${API_BASE}/token/status?ca=${encodeURIComponent(q)}`);
-        const data = await res.json();
+      if (isEvmAddress(q)) {
+        try {
+          const res = await fetch(`${API_BASE}/token/status?ca=${encodeURIComponent(q)}`);
+          const data = await res.json();
+          if (data?.error) return [];
 
-        // backend may return {error:...}
-        if (data?.error) return [];
-
-        const t = mapStatusToToken(data);
-        // keep scoring compatible
-        const withScore = { ...t, popularityScore: calculatePopularityScore(t, [t]) };
-        return [withScore];
-      } catch (err) {
-        console.error("searchTokens remote failed", err);
-        return [];
+          const t = mapStatusToToken(data);
+          const withScore = { ...t, popularityScore: calculatePopularityScore(t, [t]) };
+          return [withScore];
+        } catch (err) {
+          console.error("searchTokens remote failed", err);
+          return [];
+        }
       }
-    }
 
-    // local fuzzy search
-    const lower = q.toLowerCase();
-    return tokens.filter(t =>
-      (t.name || "").toLowerCase().includes(lower) ||
-      (t.ticker || "").toLowerCase().includes(lower) ||
-      (t.symbol || "").toLowerCase().includes(lower) ||
-      (t.contractAddress || "").toLowerCase().includes(lower)
-    );
-  }, [tokens]);
+      const lower = q.toLowerCase();
+      return tokens.filter(
+        (t) =>
+          (t.name || "").toLowerCase().includes(lower) ||
+          (t.ticker || "").toLowerCase().includes(lower) ||
+          (t.symbol || "").toLowerCase().includes(lower) ||
+          (t.contractAddress || "").toLowerCase().includes(lower)
+      );
+    },
+    [tokens]
+  );
 
   /**
    * Status reason:
@@ -416,7 +491,6 @@ export function MockDataProvider({ children }) {
       return token.freezeReason || "已冻结：市值低于 44,444";
     }
 
-    // INACTIVE
     if (token.statusReason) return token.statusReason;
 
     const reasons = [];
@@ -426,7 +500,7 @@ export function MockDataProvider({ children }) {
     const vol = token.volume4m ?? token.volume5m ?? 0;
     if (swaps < 20 && vol < 3000) reasons.push("活跃度不足（swaps < 20 且 volume < 3000）");
 
-    return reasons.length > 0 ? `未达标：${reasons.join('、')}` : "未达标";
+    return reasons.length > 0 ? `未达标：${reasons.join("、")}` : "未达标";
   }, []);
 
   /**
@@ -438,15 +512,18 @@ export function MockDataProvider({ children }) {
     loading,
     lastError,
 
-    // wallet (real)
+    // wallet
     walletConnected,
     userAddress,
-    walletProvider,
+    walletProvider, // optional (debug)
     connectWallet,
     disconnectWallet,
+    toggleWallet,
     userHolding,
-    updateUserHolding,
-    setUserHolding, // Keep for testing/compatibility
+    setUserHolding, // 你还在用 slider 做测试的话可以保留；正式可不暴露
+    updateUserHoldingForToken,
+
+    // global tier placeholder
     globalPNLTier,
     setGlobalPNLTier,
 
@@ -468,21 +545,17 @@ export function MockDataProvider({ children }) {
     // reason
     getStatusReason,
 
-    // manual refresh hook (useful for a refresh button)
+    // manual refresh hook
     refresh: loadRooms,
   };
 
-  return (
-    <MockDataContext.Provider value={value}>
-      {children}
-    </MockDataContext.Provider>
-  );
+  return <MockDataContext.Provider value={value}>{children}</MockDataContext.Provider>;
 }
 
 export function useMockData() {
   const context = useContext(MockDataContext);
   if (!context) {
-    throw new Error('useMockData must be used within MockDataProvider');
+    throw new Error("useMockData must be used within MockDataProvider");
   }
   return context;
 }
