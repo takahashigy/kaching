@@ -17,8 +17,7 @@ export default function Lobby() {
     getPopularNow, 
     getActiveTokens, 
     walletConnected,
-    connectWallet,
-    disconnectWallet,
+    toggleWallet,
     userAddress,
     globalPNLTier 
   } = useMockData();
@@ -55,7 +54,7 @@ export default function Lobby() {
               </Button>
             </Link>
             <Button 
-              onClick={walletConnected ? disconnectWallet : connectWallet}
+              onClick={toggleWallet}
               className={cn(
                 "px-4 py-2 rounded-full font-medium text-xs transition-all whitespace-nowrap",
                 walletConnected 

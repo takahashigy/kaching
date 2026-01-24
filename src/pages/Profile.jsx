@@ -17,8 +17,7 @@ const DEFAULT_AVATARS = [
 export default function Profile() {
   const { 
     walletConnected,
-    connectWallet,
-    disconnectWallet,
+    toggleWallet,
     userAddress,
     globalPNLTier, 
     setGlobalPNLTier 
@@ -132,7 +131,7 @@ export default function Profile() {
             <Label className="text-gray-400">钱包连接</Label>
             <WalletToggle 
               isConnected={walletConnected}
-              onToggle={walletConnected ? disconnectWallet : connectWallet}
+              onToggle={toggleWallet}
               userAddress={userAddress}
             />
           </div>
