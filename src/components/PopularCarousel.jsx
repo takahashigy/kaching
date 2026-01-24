@@ -149,8 +149,7 @@ export default function PopularCarousel({ tokens = [] }) {
                   >
                     <div
                       className={cn(
-                        // ✅ 这里做成手机自适配，避免太胖横向溢出
-                        "relative w-[92vw] max-w-[320px] rounded-3xl transition-all duration-300 overflow-hidden",
+                        "relative w-[82vw] max-w-[280px] rounded-2xl transition-all duration-300 overflow-hidden",
                         "bg-gradient-to-br from-[#1a1f3a] to-[#0f1229]",
                         offset === 0 && "shadow-2xl",
                         "border-2",
@@ -180,7 +179,7 @@ export default function PopularCarousel({ tokens = [] }) {
                       {/* Rank badge */}
                       <div
                         className={cn(
-                          "absolute -top-3 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg transition-all z-20",
+                          "absolute -top-2.5 left-1/2 -translate-x-1/2 w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg transition-all z-20",
                           index === 0 ? "bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-500/50" :
                           index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800" :
                           index === 2 ? "bg-gradient-to-br from-amber-600 to-amber-700" :
@@ -190,12 +189,12 @@ export default function PopularCarousel({ tokens = [] }) {
                         {index + 1}
                       </div>
 
-                      <div className="relative p-6 pt-8">
+                      <div className="relative p-4 pt-6">
                         {/* Token avatar and info */}
-                        <div className="flex flex-col items-center mb-6">
+                        <div className="flex flex-col items-center mb-4">
                           <div
                             className={cn(
-                              "w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center text-3xl font-bold mb-3 border-2",
+                              "w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center text-2xl font-bold mb-2 border-2",
                               "bg-gradient-to-br shadow-lg",
                               token.tier === "GOLD"
                                 ? "from-amber-500/30 to-orange-600/30 text-amber-400 border-amber-500/50 shadow-amber-500/30"
@@ -217,44 +216,56 @@ export default function PopularCarousel({ tokens = [] }) {
                             )}
                           </div>
 
-                          <div className="text-center min-w-0">
-                            <div className="flex items-center justify-center gap-2 mb-1 min-w-0">
-                              <span className="font-bold text-white text-2xl truncate">
+                          <div className="text-center min-w-0 w-full px-2">
+                            <div className="flex items-center justify-center gap-1.5 mb-1">
+                              <span className="font-bold text-white text-xl truncate">
                                 ${token.ticker}
                               </span>
-                              <TierBadge tier={token.tier} />
+                              <TierBadge tier={token.tier} size="sm" />
                             </div>
-                            <p className="text-gray-400 text-sm truncate max-w-[260px]">
+                            <p className="text-gray-400 text-xs truncate">
                               {token.name}
                             </p>
                           </div>
                         </div>
 
-                        {/* Stats grid */}
-                        <div className="grid grid-cols-4 gap-3">
-                          <div className="flex flex-col items-center gap-2">
-                            <TrendingUp className="w-5 h-5 text-emerald-400" />
-                            <span className="text-white font-bold text-sm">
-                              ${formatNumber(token.marketCap)}
-                            </span>
+                        {/* Stats grid - 2x2 layout for better fit */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
+                            <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <div className="min-w-0">
+                              <div className="text-gray-400 text-[10px]">市值</div>
+                              <div className="text-white font-bold text-xs truncate">
+                                ${formatNumber(token.marketCap)}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex flex-col items-center gap-2">
-                            <Headphones className="w-5 h-5 text-cyan-400" />
-                            <span className="text-white font-bold text-sm">
-                              {token.listeners || 0}
-                            </span>
+                          <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
+                            <Headphones className="w-4 h-4 text-cyan-400 shrink-0" />
+                            <div className="min-w-0">
+                              <div className="text-gray-400 text-[10px]">听众</div>
+                              <div className="text-white font-bold text-xs">
+                                {token.listeners || 0}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex flex-col items-center gap-2">
-                            <Users className="w-5 h-5 text-purple-400" />
-                            <span className="text-white font-bold text-sm">
-                              {token.holders || 0}
-                            </span>
+                          <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
+                            <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                            <div className="min-w-0">
+                              <div className="text-gray-400 text-[10px]">热度</div>
+                              <div className="text-white font-bold text-xs">
+                                +{token.joinVelocity || 0}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex flex-col items-center gap-2">
-                            <Zap className="w-5 h-5 text-amber-400" />
-                            <span className="text-white font-bold text-sm">
-                              +{token.joinVelocity || 0}
-                            </span>
+                          <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
+                            <Users className="w-4 h-4 text-purple-400 shrink-0" />
+                            <div className="min-w-0">
+                              <div className="text-gray-400 text-[10px]">持有</div>
+                              <div className="text-white font-bold text-xs">
+                                {token.holders || 0}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
