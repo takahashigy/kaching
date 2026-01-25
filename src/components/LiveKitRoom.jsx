@@ -35,22 +35,19 @@ export default function LiveKitRoom({
 
     try {
       // 调用后端获取 token
-      const response = await fetch('/api/functions/getLiveKitToken', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          roomName, 
-          userHoldingPercent 
-        }),
+      const { base44 } = await import('@/api/base44Client');
+      const response = await base44.functions.invoke('getLiveKitToken', { 
+        roomName, 
+        userHoldingPercent 
       });
 
-      const data = await response.json();
+      const data = response.data;
       
-      console.log('🎤 LiveKit token response:', { ok: response.ok, status: response.status, data });
+      console.log('🎤 LiveKit token response:', { status: response.status, data });
       
-      if (!response.ok) {
+      if (response.status !== 200 || !data) {
         console.error('❌ Token request failed:', data);
-        throw new Error(data.error || data.message || 'Failed to get token');
+        throw new Error(data?.error || data?.message || 'Failed to get token');
       }
 
       const { token, wsUrl, canPublish: canPub } = data;
