@@ -115,14 +115,13 @@ export default function LiveKitRoom({
         onSpeakingChange?.(localIsSpeaking);
       });
 
-      // 监听音频级别
-      newRoom.on(RoomEvent.AudioPlaybackStatusChanged, () => {
-        const localParticipant = newRoom.localParticipant;
-        localParticipant.on('audioTrackPublished', (publication) => {
-          publication.on('audioLevelChanged', (level) => {
+      // 监听本地音频轨道音量
+      newRoom.on(RoomEvent.LocalTrackPublished, (publication) => {
+        if (publication.kind === Track.Kind.Audio) {
+          publication.track?.on('audioLevelChanged', (level) => {
             setAudioLevel(level);
           });
-        });
+        }
       });
 
       // 连接到房间
@@ -285,25 +284,23 @@ export default function LiveKitRoom({
 
       {/* 正在发言浮条 */}
       {!isMuted && (
-        <div className="bg-gradient-to-r from-cyan-500/20 to-purple-600/20 border border-cyan-500/30 rounded-lg p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+        <div className="bg-gradient-to-r from-cyan-500/20 to-purple-600/20 border border-cyan-500/30 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
               <div className="relative">
-                <Mic className="w-5 h-5 text-cyan-400" />
-                {/* 音波条 */}
-                <div className="absolute -right-6 top-0 flex items-end gap-0.5 h-5">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div
-                      key={i}
-                      className="w-0.5 bg-cyan-400 rounded-full transition-all duration-100"
-                      style={{
-                        height: `${Math.max(20, audioLevel * 100 * (1 + Math.sin(Date.now() / 100 + i)))}%`
-                      }}
-                    />
-                  ))}
+                {/* 麦克风图标 + 脉动环 */}
+                <div className={cn(
+                  "absolute inset-0 rounded-full bg-cyan-400/30 animate-ping",
+                  audioLevel > 0.1 ? "opacity-100" : "opacity-0"
+                )} />
+                <div className="relative bg-cyan-500 p-2 rounded-full">
+                  <Mic className="w-4 h-4 text-white" />
                 </div>
               </div>
-              <span className="text-cyan-400 font-medium ml-5">你正在发言 {remainingTime}s</span>
+              <div>
+                <div className="text-cyan-400 font-medium">你正在发言</div>
+                <div className="text-xs text-gray-400">剩余 {remainingTime} 秒</div>
+              </div>
             </div>
             <Button
               onClick={toggleMicrophone}
@@ -313,6 +310,34 @@ export default function LiveKitRoom({
             >
               结束发言
             </Button>
+          </div>
+          
+          {/* 音量强度条 */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs text-gray-400">
+              <span>麦克风强度</span>
+              <span>{Math.round(audioLevel * 100)}%</span>
+            </div>
+            <div className="flex items-center gap-1 h-8">
+              {[...Array(20)].map((_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex-1 rounded-sm transition-all duration-75",
+                    audioLevel * 20 > i 
+                      ? i < 12 
+                        ? "bg-green-500" 
+                        : i < 16 
+                          ? "bg-yellow-500" 
+                          : "bg-red-500"
+                      : "bg-gray-700"
+                  )}
+                  style={{
+                    height: `${20 + (i * 3)}%`
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
