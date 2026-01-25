@@ -325,12 +325,17 @@ export default function Room() {
               )}
             </div>
 
-            <LiveKitRoom 
-              roomName={roomName}
-              userHoldingPercent={userHolding}
-              onParticipantCountChange={(count) => setLiveListeners(count)}
-              onSpeakingChange={(speaking) => setLiveSpeakers(speaking ? 1 : 0)}
-            />
+            <div>
+              <p className="text-xs text-yellow-400 mb-2">
+                DEBUG: 传给 LiveKitRoom 的 userHolding = {userHolding}
+              </p>
+              <LiveKitRoom 
+                roomName={roomName}
+                userHoldingPercent={userHolding}
+                onParticipantCountChange={(count) => setLiveListeners(count)}
+                onSpeakingChange={(speaking) => setLiveSpeakers(speaking ? 1 : 0)}
+              />
+            </div>
           </div>
         ) : (
           <div className="text-center py-8 bg-gray-800/30 rounded-2xl">

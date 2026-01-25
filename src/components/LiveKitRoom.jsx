@@ -21,6 +21,8 @@ export default function LiveKitRoom({
 
   // 连接到 LiveKit 房间
   const connectToRoom = useCallback(async () => {
+    console.log('🔌 connectToRoom 开始, roomName:', roomName, 'userHoldingPercent:', userHoldingPercent);
+    
     // 断开旧连接
     if (room) {
       room.disconnect();
@@ -36,6 +38,7 @@ export default function LiveKitRoom({
     try {
       // 调用后端获取 token
       const { base44 } = await import('@/api/base44Client');
+      console.log('📡 调用后端 getLiveKitToken, 参数:', { roomName, userHoldingPercent });
       const response = await base44.functions.invoke('getLiveKitToken', { 
         roomName, 
         userHoldingPercent 
@@ -51,8 +54,9 @@ export default function LiveKitRoom({
       }
 
       const { token, wsUrl, canPublish: canPub } = data;
-      console.log('✅ 持仓%:', userHoldingPercent, '可发言:', canPub);
+      console.log('✅ 后端返回 - 持仓%:', userHoldingPercent, '可发言:', canPub, 'canPub类型:', typeof canPub);
       setCanPublish(canPub);
+      console.log('✅ setCanPublish 已调用:', canPub);
 
       // 创建 Room 实例
       const newRoom = new Room({
