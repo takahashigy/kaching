@@ -45,6 +45,12 @@ export default function LiveKitRoom({
   const [remainingTime, setRemainingTime] = useState(0);
   const [cooldownTime, setCooldownTime] = useState(0);
   const [isOnCooldown, setIsOnCooldown] = useState(false);
+  
+  // 音量级别（0-1）
+  const [audioLevel, setAudioLevel] = useState(0);
+  
+  // 排队位置（模拟）
+  const [queuePosition, setQueuePosition] = useState(0);
 
   // 连接到 LiveKit 房间
   const connectToRoom = useCallback(async () => {
@@ -109,6 +115,16 @@ export default function LiveKitRoom({
         onSpeakingChange?.(localIsSpeaking);
       });
 
+      // 监听音频级别
+      newRoom.on(RoomEvent.AudioPlaybackStatusChanged, () => {
+        const localParticipant = newRoom.localParticipant;
+        localParticipant.on('audioTrackPublished', (publication) => {
+          publication.on('audioLevelChanged', (level) => {
+            setAudioLevel(level);
+          });
+        });
+      });
+
       // 连接到房间
       await newRoom.connect(wsUrl, token);
       
@@ -153,11 +169,14 @@ export default function LiveKitRoom({
         setRemainingTime(limits.speakDuration);
         console.log('✅ 开启麦克风，可发言', limits.speakDuration, '秒');
       } else {
-        // 关闭麦克风
+        // 提前结束发言，进入冷却
+        const limits = getSpeakingLimits(userHoldingPercent);
         await room.localParticipant.setMicrophoneEnabled(false);
         setIsMuted(true);
         setRemainingTime(0);
-        console.log('✅ 关闭麦克风');
+        setIsOnCooldown(true);
+        setCooldownTime(limits.cooldown);
+        console.log('✅ 提前结束发言，进入冷却', limits.cooldown, '秒');
       }
     } catch (err) {
       console.error('Toggle microphone error:', err);
@@ -247,6 +266,8 @@ export default function LiveKitRoom({
 
   if (!connected) return null;
 
+  const limits = getSpeakingLimits(userHoldingPercent);
+
   return (
     <div className="space-y-3">
       {/* 房间状态 */}
@@ -255,62 +276,90 @@ export default function LiveKitRoom({
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-sm text-gray-300">音频已连接</span>
         </div>
-        
+
         <div className="flex items-center gap-1 text-gray-400">
           <Users className="w-4 h-4" />
           <span className="text-sm">{participants.length + 1}</span>
         </div>
       </div>
 
-      {/* 调试信息 */}
-      <div className="text-xs text-gray-500 mb-2">
-        持仓: {userHoldingPercent.toFixed(2)}% | 可发言: {canPublish ? '是' : '否'}
-      </div>
-
-      {/* 麦克风控制 */}
-      <Button
-        onClick={toggleMicrophone}
-        disabled={!canPublish || isOnCooldown}
-        className={cn(
-          "w-full py-6 text-base font-medium transition-all",
-          isOnCooldown
-            ? "bg-gray-600 cursor-not-allowed"
-            : isMuted 
-              ? "bg-gray-700 hover:bg-gray-600" 
-              : isSpeaking
-                ? "bg-gradient-to-r from-cyan-500 to-purple-600 animate-pulse"
-                : "bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
-        )}
-      >
-        <div className="flex flex-col items-center gap-1">
-          <div className="flex items-center gap-3">
-            {isMuted ? (
-              <MicOff className="w-5 h-5" />
-            ) : (
-              <Mic className="w-5 h-5" />
-            )}
-            <span>
-              {!canPublish 
-                ? `需要持仓 ≥ 0.01% 才能发言` 
-                : isOnCooldown
-                  ? `冷却中 ${cooldownTime}s`
-                  : isMuted 
-                    ? `点击发言 (${getSpeakingLimits(userHoldingPercent).title})` 
-                    : `发言中 ${remainingTime}s`}
-            </span>
-          </div>
-          {!isMuted && remainingTime > 0 && (
-            <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
-              <div 
-                className="bg-cyan-400 h-1.5 rounded-full transition-all duration-1000"
-                style={{ 
-                  width: `${(remainingTime / getSpeakingLimits(userHoldingPercent).speakDuration) * 100}%` 
-                }}
-              />
+      {/* 正在发言浮条 */}
+      {!isMuted && (
+        <div className="bg-gradient-to-r from-cyan-500/20 to-purple-600/20 border border-cyan-500/30 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Mic className="w-5 h-5 text-cyan-400" />
+                {/* 音波条 */}
+                <div className="absolute -right-6 top-0 flex items-end gap-0.5 h-5">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className="w-0.5 bg-cyan-400 rounded-full transition-all duration-100"
+                      style={{
+                        height: `${Math.max(20, audioLevel * 100 * (1 + Math.sin(Date.now() / 100 + i)))}%`
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <span className="text-cyan-400 font-medium ml-5">你正在发言 {remainingTime}s</span>
             </div>
-          )}
+            <Button
+              onClick={toggleMicrophone}
+              variant="ghost"
+              size="sm"
+              className="text-gray-300 hover:text-white"
+            >
+              结束发言
+            </Button>
+          </div>
         </div>
-      </Button>
+      )}
+
+      {/* 排队提示 */}
+      {canPublish && isMuted && !isOnCooldown && queuePosition > 0 && (
+        <div className="text-center p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+          <span className="text-amber-400 text-sm">排队中：第 {queuePosition} 位</span>
+        </div>
+      )}
+
+      {/* 麦克风控制（只在未发言时显示） */}
+      {isMuted && (
+        <Button
+          onClick={toggleMicrophone}
+          disabled={!canPublish || isOnCooldown}
+          className={cn(
+            "w-full py-6 text-base font-medium transition-all",
+            isOnCooldown
+              ? "bg-gray-600 cursor-not-allowed"
+              : "bg-gray-700 hover:bg-gray-600"
+          )}
+        >
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-3">
+              <MicOff className="w-5 h-5" />
+              <span>
+                {!canPublish 
+                  ? `需要持仓 ≥ 0.01% 才能发言` 
+                  : isOnCooldown
+                    ? `冷却中 ${cooldownTime}s`
+                    : `点击发言 (${limits.title}·${limits.speakDuration}s)`}
+              </span>
+            </div>
+            {isOnCooldown && (
+              <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                <div 
+                  className="bg-red-400 h-1.5 rounded-full transition-all duration-1000"
+                  style={{ 
+                    width: `${(cooldownTime / limits.cooldown) * 100}%` 
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </Button>
+      )}
 
       {/* 参与者列表 */}
       {participants.length > 0 && (
