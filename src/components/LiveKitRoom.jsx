@@ -21,7 +21,14 @@ export default function LiveKitRoom({
 
   // 连接到 LiveKit 房间
   const connectToRoom = useCallback(async () => {
-    if (connecting || connected) return;
+    // 断开旧连接
+    if (room) {
+      room.disconnect();
+      setRoom(null);
+      setConnected(false);
+    }
+    
+    if (connecting) return;
 
     setConnecting(true);
     setError(null);
@@ -118,7 +125,7 @@ export default function LiveKitRoom({
         room.disconnect();
       }
     };
-  }, [connectToRoom]); // 持仓或房间变化时重新连接
+  }, [roomName, userHoldingPercent]); // 持仓或房间变化时重新连接
 
   // 渲染连接状态
   if (connecting) {
