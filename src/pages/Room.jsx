@@ -77,11 +77,16 @@ export default function Room() {
         return;
       }
       try {
-        await updateUserHoldingForToken(ca);
+        const result = await updateUserHoldingForToken(ca);
+        console.log('📊 持仓检查结果:', result);
         // 测试：如果持仓为0，自动设置1%方便测试连麦
         if (!cancelled) {
           setTimeout(() => {
-            setUserHolding(prev => prev === 0 ? 1 : prev);
+            setUserHolding(prev => {
+              const newVal = prev === 0 ? 1 : prev;
+              console.log('📊 持仓更新: prev=', prev, 'new=', newVal);
+              return newVal;
+            });
           }, 100);
         }
       } catch (e) {

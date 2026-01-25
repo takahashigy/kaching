@@ -51,6 +51,7 @@ export default function LiveKitRoom({
       }
 
       const { token, wsUrl, canPublish: canPub } = data;
+      console.log('✅ 持仓%:', userHoldingPercent, '可发言:', canPub);
       setCanPublish(canPub);
 
       // 创建 Room 实例
@@ -165,6 +166,11 @@ export default function LiveKitRoom({
           <Users className="w-4 h-4" />
           <span className="text-sm">{participants.length + 1}</span>
         </div>
+      </div>
+
+      {/* 调试信息 */}
+      <div className="text-xs text-gray-500 mb-2">
+        持仓: {userHoldingPercent.toFixed(2)}% | 可发言: {canPublish ? '是' : '否'}
       </div>
 
       {/* 麦克风控制 */}
