@@ -161,7 +161,19 @@ export default function LiveKitRoom({
 
     try {
       if (isMuted) {
-        // 开启麦克风
+        // 开启麦克风 - 先请求浏览器权限
+        console.log('🎤 请求麦克风权限...');
+        
+        // 显式请求麦克风权限
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+          console.log('✅ 麦克风权限已授予');
+        } catch (permError) {
+          console.error('❌ 麦克风权限被拒绝:', permError);
+          alert('需要麦克风权限才能发言，请在浏览器设置中允许麦克风访问。');
+          return;
+        }
+        
         const limits = getSpeakingLimits(userHoldingPercent);
         await room.localParticipant.setMicrophoneEnabled(true);
         setIsMuted(false);
@@ -179,6 +191,7 @@ export default function LiveKitRoom({
       }
     } catch (err) {
       console.error('Toggle microphone error:', err);
+      alert('麦克风开启失败: ' + err.message);
     }
   }, [room, canPublish, isMuted, isOnCooldown, userHoldingPercent]);
 
