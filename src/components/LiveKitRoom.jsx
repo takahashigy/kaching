@@ -338,18 +338,76 @@ export default function LiveKitRoom({
         <div className="bg-gradient-to-r from-cyan-500/20 to-purple-600/20 border border-cyan-500/30 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                {/* 麦克风图标 + 脉动环 */}
-                <div className={cn(
-                  "absolute inset-0 rounded-full bg-cyan-400/30 animate-ping",
-                  audioLevel > 0.1 ? "opacity-100" : "opacity-0"
-                )} />
-                <div className="relative bg-cyan-500 p-2 rounded-full">
-                  <Mic className="w-4 h-4 text-white" />
+              {/* 头像 + 动态音量圆环 */}
+              <div className="relative w-12 h-12">
+                {/* 音量圆环 - 外层 */}
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 48 48">
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="22"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="text-gray-700"
+                  />
+                  <circle
+                    cx="24"
+                    cy="24"
+                    r="22"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeDasharray={`${audioLevel * 138} 138`}
+                    className={cn(
+                      "transition-all duration-100",
+                      audioLevel > 0.7 ? "text-red-400" :
+                      audioLevel > 0.4 ? "text-yellow-400" :
+                      "text-cyan-400"
+                    )}
+                    style={{
+                      filter: audioLevel > 0.1 ? `drop-shadow(0 0 ${audioLevel * 8}px currentColor)` : 'none'
+                    }}
+                  />
+                </svg>
+
+                {/* 头像/麦克风图标 */}
+                <div className="absolute inset-2 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <Mic className="w-5 h-5 text-white" />
                 </div>
+
+                {/* 脉动效果 */}
+                {audioLevel > 0.1 && (
+                  <>
+                    <div 
+                      className="absolute inset-0 rounded-full bg-cyan-400/20 animate-ping"
+                      style={{ animationDuration: '1s' }}
+                    />
+                    <div 
+                      className="absolute inset-0 rounded-full bg-cyan-400/10 animate-ping"
+                      style={{ animationDuration: '1.5s', animationDelay: '0.3s' }}
+                    />
+                  </>
+                )}
               </div>
+
               <div>
-                <div className="text-cyan-400 font-medium">你正在发言</div>
+                <div className="text-cyan-400 font-medium flex items-center gap-2">
+                  你正在发言
+                  {/* 音波动画指示器 */}
+                  <div className="flex items-center gap-0.5">
+                    {[...Array(3)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-0.5 bg-cyan-400 rounded-full"
+                        style={{
+                          height: `${8 + (audioLevel > 0.1 ? Math.random() * audioLevel * 8 : 0)}px`,
+                          animation: audioLevel > 0.1 ? `pulse ${0.6 + i * 0.1}s ease-in-out infinite` : 'none'
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
                 <div className="text-xs text-gray-400">剩余 {remainingTime} 秒</div>
               </div>
             </div>
@@ -362,7 +420,7 @@ export default function LiveKitRoom({
               结束发言
             </Button>
           </div>
-          
+
           {/* 音量强度条 */}
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs text-gray-400">
