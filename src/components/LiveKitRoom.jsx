@@ -204,19 +204,23 @@ export default function LiveKitRoom({
 
   // 实时监听麦克风音量（使用RAF持续读取）
   useEffect(() => {
-    if (!room || isMuted) {
+    if (!room || isMuted || !room.localParticipant) {
       setAudioLevel(0);
       return;
     }
 
     let rafId;
     const updateAudioLevel = () => {
+      if (!room?.localParticipant?.audioTracks) {
+        rafId = requestAnimationFrame(updateAudioLevel);
+        return;
+      }
+
       const audioTracks = Array.from(room.localParticipant.audioTracks.values());
       if (audioTracks.length > 0) {
         const track = audioTracks[0].audioTrack;
-        if (track) {
-          // getSpeakerLevel() 返回 0-1 的音量值
-          const level = track.getSpeakerLevel?.() || 0;
+        if (track && typeof track.getSpeakerLevel === 'function') {
+          const level = track.getSpeakerLevel() || 0;
           setAudioLevel(level);
         }
       }
