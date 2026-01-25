@@ -114,10 +114,10 @@ export default function LiveKitRoom({
 
     try {
       setIsMuted((prevMuted) => {
-        const newEnabled = !prevMuted;
-        console.log('🎤 切换麦克风: 当前静音=', prevMuted, '→ 新状态=', newEnabled ? '开启' : '静音');
-        room.localParticipant.setMicrophoneEnabled(newEnabled);
-        return !newEnabled;
+        const enabled = !prevMuted;
+        console.log('🎤 切换麦克风: 当前静音=', prevMuted, '→', enabled ? '开启麦克风' : '关闭麦克风');
+        room.localParticipant.setMicrophoneEnabled(enabled);
+        return !prevMuted;
       });
     } catch (err) {
       console.error('Toggle microphone error:', err);
