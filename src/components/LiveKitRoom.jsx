@@ -226,12 +226,40 @@ export default function LiveKitRoom({
     }
   }, [room, canPublish, isMuted, isOnCooldown, userHoldingPercent]);
 
-  // 清理：关闭麦克风时重置音量
+  // 轮询读取麦克风音量（LiveKit audioLevel 事件可能不稳定，用 RAF 兜底）
   useEffect(() => {
-    if (isMuted) {
+    if (!room || isMuted || !room.localParticipant) {
       setAudioLevel(0);
+      return;
     }
-  }, [isMuted]);
+
+    let rafId;
+    const pollAudioLevel = () => {
+      try {
+        const audioTracks = Array.from(room.localParticipant.audioTracks.values());
+        if (audioTracks.length > 0) {
+          const publication = audioTracks[0];
+          const track = publication?.audioTrack;
+          if (track && typeof track.getSpeakerLevel === 'function') {
+            const level = track.getSpeakerLevel();
+            if (level > 0) {
+              console.log('🔊 RAF 读取音量:', level);
+              setAudioLevel(level);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('读取音量失败:', e);
+      }
+      rafId = requestAnimationFrame(pollAudioLevel);
+    };
+
+    rafId = requestAnimationFrame(pollAudioLevel);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      setAudioLevel(0);
+    };
+  }, [room, isMuted]);
 
   // 倒计时逻辑
   useEffect(() => {
