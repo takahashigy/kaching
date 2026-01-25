@@ -143,6 +143,17 @@ export default function LiveKitRoom({
       await newRoom.connect(wsUrl, token);
       console.log('🎉 connect() 完成，roomID:', newRoom.name);
       
+      // ② 连接成功后立即设置音量监听
+      newRoom.localParticipant.on(ParticipantEvent.AudioLevelChanged, (level) => {
+        console.log('🔊 audioLevel changed:', level);
+        setAudioLevel(level);
+      });
+      
+      newRoom.localParticipant.on(ParticipantEvent.IsSpeakingChanged, (speaking) => {
+        console.log('🗣️ isSpeaking changed:', speaking);
+        setIsSpeaking(speaking);
+      });
+      
       setRoom(newRoom);
 
     } catch (err) {
@@ -195,20 +206,9 @@ export default function LiveKitRoom({
         console.log('🎤 开启麦克风，roomID:', room.name);
         await room.localParticipant.setMicrophoneEnabled(true);
         
-        // ③ 监听本地 participant 的音量事件
-        room.localParticipant.on(ParticipantEvent.AudioLevelChanged, (level) => {
-          console.log('🔊 audioLevel:', level);
-          setAudioLevel(level);
-        });
-        
-        room.localParticipant.on(ParticipantEvent.IsSpeakingChanged, (speaking) => {
-          console.log('🗣️ isSpeaking:', speaking);
-          setIsSpeaking(speaking);
-        });
-        
         setIsMuted(false);
         setRemainingTime(limits.speakDuration);
-        console.log('✅ 麦克风已开启，可发言', limits.speakDuration, '秒');
+        console.log('✅ 麦克风已开启，可发言', limits.speakDuration, '秒，等待音量数据...');
       } else {
         // 提前结束发言，进入冷却
         const limits = getSpeakingLimits(userHoldingPercent);
