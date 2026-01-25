@@ -103,12 +103,17 @@ export default function LiveKitRoom({
 
   // 切换麦克风
   const toggleMicrophone = useCallback(async () => {
-    if (!room || !canPublish) return;
+    console.log('🎤 toggleMicrophone called, room:', !!room, 'canPublish:', canPublish, 'isMuted:', isMuted);
+    if (!room || !canPublish) {
+      console.log('❌ 无法切换麦克风: room=', !!room, 'canPublish=', canPublish);
+      return;
+    }
 
     try {
       const enabled = !isMuted;
       await room.localParticipant.setMicrophoneEnabled(enabled);
       setIsMuted(!enabled);
+      console.log('✅ 麦克风已切换:', enabled ? '开启' : '关闭');
     } catch (err) {
       console.error('Toggle microphone error:', err);
     }
