@@ -52,6 +52,10 @@ export default function LiveKitRoom({
   // 音量级别（0-1）
   const [audioLevel, setAudioLevel] = useState(0);
   
+  // 本地音频分析器
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  
   // 排队位置（模拟）
   const [queuePosition, setQueuePosition] = useState(0);
 
@@ -206,13 +210,36 @@ export default function LiveKitRoom({
         console.log('🎤 开启麦克风，roomID:', room.name);
         await room.localParticipant.setMicrophoneEnabled(true);
         
+        // ③ 获取本地麦克风流并创建音频分析器
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 256;
+          
+          const source = audioContext.createMediaStreamSource(stream);
+          source.connect(analyser);
+          
+          audioContextRef.current = audioContext;
+          analyserRef.current = analyser;
+          console.log('✅ 音频分析器已创建');
+        } catch (e) {
+          console.error('❌ 创建音频分析器失败:', e);
+        }
+        
         setIsMuted(false);
         setRemainingTime(limits.speakDuration);
-        console.log('✅ 麦克风已开启，可发言', limits.speakDuration, '秒，等待音量数据...');
+        console.log('✅ 麦克风已开启，可发言', limits.speakDuration, '秒');
       } else {
         // 提前结束发言，进入冷却
         const limits = getSpeakingLimits(userHoldingPercent);
         await room.localParticipant.setMicrophoneEnabled(false);
+        // 清理音频分析器
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+          audioContextRef.current = null;
+          analyserRef.current = null;
+        }
         setIsMuted(true);
         setRemainingTime(0);
         setAudioLevel(0);
@@ -226,40 +253,39 @@ export default function LiveKitRoom({
     }
   }, [room, canPublish, isMuted, isOnCooldown, userHoldingPercent]);
 
-  // 轮询读取麦克风音量（LiveKit audioLevel 事件可能不稳定，用 RAF 兜底）
+  // 使用 Web Audio API 直接分析本地麦克风音量
   useEffect(() => {
-    if (!room || isMuted || !room.localParticipant) {
+    if (isMuted || !analyserRef.current) {
       setAudioLevel(0);
       return;
     }
 
+    const analyser = analyserRef.current;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    
     let rafId;
-    const pollAudioLevel = () => {
-      try {
-        const audioTracks = Array.from(room.localParticipant.audioTracks.values());
-        if (audioTracks.length > 0) {
-          const publication = audioTracks[0];
-          const track = publication?.audioTrack;
-          if (track && typeof track.getSpeakerLevel === 'function') {
-            const level = track.getSpeakerLevel();
-            if (level > 0) {
-              console.log('🔊 RAF 读取音量:', level);
-              setAudioLevel(level);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('读取音量失败:', e);
+    const pollVolume = () => {
+      analyser.getByteFrequencyData(dataArray);
+      
+      // 计算平均音量
+      const sum = dataArray.reduce((a, b) => a + b, 0);
+      const average = sum / dataArray.length;
+      const normalized = Math.min(1, average / 128); // 归一化到 0-1
+      
+      if (normalized > 0.01) {
+        console.log('🔊 本地音量:', normalized.toFixed(2));
       }
-      rafId = requestAnimationFrame(pollAudioLevel);
+      setAudioLevel(normalized);
+      
+      rafId = requestAnimationFrame(pollVolume);
     };
 
-    rafId = requestAnimationFrame(pollAudioLevel);
+    rafId = requestAnimationFrame(pollVolume);
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
       setAudioLevel(0);
     };
-  }, [room, isMuted]);
+  }, [isMuted]);
 
   // 倒计时逻辑
   useEffect(() => {
@@ -270,6 +296,12 @@ export default function LiveKitRoom({
             // 时间到，自动关闭麦克风并进入冷却
             if (room) {
               room.localParticipant.setMicrophoneEnabled(false);
+            }
+            // 清理音频分析器
+            if (audioContextRef.current) {
+              audioContextRef.current.close();
+              audioContextRef.current = null;
+              analyserRef.current = null;
             }
             setIsMuted(true);
             
