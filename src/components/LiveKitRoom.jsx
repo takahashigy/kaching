@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Room, RoomEvent, Track } from 'livekit-client';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Room, RoomEvent, Track, ParticipantEvent } from 'livekit-client';
 import { Mic, MicOff, Volume2, Users, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,9 @@ export default function LiveKitRoom({
   const [error, setError] = useState(null);
   const [canPublish, setCanPublish] = useState(false);
   
+  const connectingRef = useRef(false);
+  const roomRef = useRef(null);
+  
   // 发言时长和冷却时间
   const [remainingTime, setRemainingTime] = useState(0);
   const [cooldownTime, setCooldownTime] = useState(0);
@@ -56,15 +59,22 @@ export default function LiveKitRoom({
   const connectToRoom = useCallback(async () => {
     console.log('🔌 connectToRoom 开始, roomName:', roomName, 'userHoldingPercent:', userHoldingPercent);
     
+    // 防止重复连接
+    if (connectingRef.current) {
+      console.log('⚠️ 已经在连接中，跳过');
+      return;
+    }
+    
     // 断开旧连接
-    if (room) {
-      room.disconnect();
+    if (roomRef.current) {
+      console.log('🔌 断开旧连接');
+      await roomRef.current.disconnect();
+      roomRef.current = null;
       setRoom(null);
       setConnected(false);
     }
-    
-    if (connecting) return;
 
+    connectingRef.current = true;
     setConnecting(true);
     setError(null);
 
@@ -87,14 +97,26 @@ export default function LiveKitRoom({
       }
 
       const { token, wsUrl, canPublish: canPub } = data;
-      console.log('✅ 后端返回 - 持仓%:', userHoldingPercent, '可发言:', canPub, 'canPub类型:', typeof canPub);
+      console.log('✅ 后端返回 - 持仓%:', userHoldingPercent, '可发言:', canPub);
       setCanPublish(canPub);
-      console.log('✅ setCanPublish 已调用:', canPub);
 
       // 创建 Room 实例
       const newRoom = new Room({
         adaptiveStream: true,
         dynacast: true,
+      });
+      
+      roomRef.current = newRoom;
+
+      // 监听连接状态变化
+      newRoom.on(RoomEvent.Connected, () => {
+        console.log('✅ Room Connected - 连接成功！');
+        setConnected(true);
+        updateParticipants(newRoom);
+      });
+      
+      newRoom.on(RoomEvent.ConnectionStateChanged, (state) => {
+        console.log('🔄 Connection state:', state);
       });
 
       // 监听参与者变化
@@ -109,42 +131,29 @@ export default function LiveKitRoom({
       // 监听说话状态
       newRoom.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
         const localIsSpeaking = speakers.some(
-          s => s.identity === newRoom.localParticipant.identity
+          s => s.identity === newRoom.localParticipant?.identity
         );
+        console.log('🗣️ ActiveSpeakers changed, local isSpeaking:', localIsSpeaking);
         setIsSpeaking(localIsSpeaking);
         onSpeakingChange?.(localIsSpeaking);
       });
 
-      // 监听本地音频轨道发布
-      newRoom.on(RoomEvent.LocalTrackPublished, (publication) => {
-        if (publication.kind === Track.Kind.Audio) {
-          console.log('🎤 本地音频轨道已发布，开始监听音量');
-
-          // 监听音频级别变化
-          const track = publication.audioTrack;
-          if (track) {
-            track.on('audioLevelChanged', (level) => {
-              console.log('🔊 音量:', level);
-              setAudioLevel(level);
-            });
-          }
-        }
-      });
-
-      // 连接到房间
+      // ① 先连接
+      console.log('🔗 开始连接到房间...');
       await newRoom.connect(wsUrl, token);
+      console.log('🎉 connect() 完成，roomID:', newRoom.name);
       
       setRoom(newRoom);
-      setConnected(true);
-      updateParticipants(newRoom);
 
     } catch (err) {
-      console.error('LiveKit connection error:', err);
+      console.error('❌ LiveKit connection error:', err);
       setError(err.message);
+      roomRef.current = null;
     } finally {
       setConnecting(false);
+      connectingRef.current = false;
     }
-  }, [roomName, userHoldingPercent, connecting, connected, onSpeakingChange]);
+  }, [roomName, userHoldingPercent, onSpeakingChange]);
 
   // 更新参与者列表
   const updateParticipants = (room) => {
@@ -171,7 +180,6 @@ export default function LiveKitRoom({
         // 开启麦克风 - 先请求浏览器权限
         console.log('🎤 请求麦克风权限...');
         
-        // 显式请求麦克风权限
         try {
           await navigator.mediaDevices.getUserMedia({ audio: true });
           console.log('✅ 麦克风权限已授予');
@@ -182,56 +190,48 @@ export default function LiveKitRoom({
         }
         
         const limits = getSpeakingLimits(userHoldingPercent);
+        
+        // ② 在 connected 之后才 publish
+        console.log('🎤 开启麦克风，roomID:', room.name);
         await room.localParticipant.setMicrophoneEnabled(true);
+        
+        // ③ 监听本地 participant 的音量事件
+        room.localParticipant.on(ParticipantEvent.AudioLevelChanged, (level) => {
+          console.log('🔊 audioLevel:', level);
+          setAudioLevel(level);
+        });
+        
+        room.localParticipant.on(ParticipantEvent.IsSpeakingChanged, (speaking) => {
+          console.log('🗣️ isSpeaking:', speaking);
+          setIsSpeaking(speaking);
+        });
+        
         setIsMuted(false);
         setRemainingTime(limits.speakDuration);
-        console.log('✅ 开启麦克风，可发言', limits.speakDuration, '秒');
+        console.log('✅ 麦克风已开启，可发言', limits.speakDuration, '秒');
       } else {
         // 提前结束发言，进入冷却
         const limits = getSpeakingLimits(userHoldingPercent);
         await room.localParticipant.setMicrophoneEnabled(false);
         setIsMuted(true);
         setRemainingTime(0);
+        setAudioLevel(0);
         setIsOnCooldown(true);
         setCooldownTime(limits.cooldown);
         console.log('✅ 提前结束发言，进入冷却', limits.cooldown, '秒');
       }
     } catch (err) {
-      console.error('Toggle microphone error:', err);
+      console.error('❌ Toggle microphone error:', err);
       alert('麦克风开启失败: ' + err.message);
     }
   }, [room, canPublish, isMuted, isOnCooldown, userHoldingPercent]);
 
-  // 实时监听麦克风音量（使用RAF持续读取）
+  // 清理：关闭麦克风时重置音量
   useEffect(() => {
-    if (!room || isMuted || !room.localParticipant) {
+    if (isMuted) {
       setAudioLevel(0);
-      return;
     }
-
-    let rafId;
-    const updateAudioLevel = () => {
-      if (!room?.localParticipant?.audioTracks) {
-        rafId = requestAnimationFrame(updateAudioLevel);
-        return;
-      }
-
-      const audioTracks = Array.from(room.localParticipant.audioTracks.values());
-      if (audioTracks.length > 0) {
-        const track = audioTracks[0].audioTrack;
-        if (track && typeof track.getSpeakerLevel === 'function') {
-          const level = track.getSpeakerLevel() || 0;
-          setAudioLevel(level);
-        }
-      }
-      rafId = requestAnimationFrame(updateAudioLevel);
-    };
-
-    rafId = requestAnimationFrame(updateAudioLevel);
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [room, isMuted]);
+  }, [isMuted]);
 
   // 倒计时逻辑
   useEffect(() => {
@@ -277,16 +277,18 @@ export default function LiveKitRoom({
     }
   }, [isOnCooldown, cooldownTime]);
 
-  // 初始化连接
+  // 初始化连接（仅在 roomName 变化时）
   useEffect(() => {
     connectToRoom();
 
     return () => {
-      if (room) {
-        room.disconnect();
+      if (roomRef.current) {
+        console.log('🔌 组件卸载，断开连接');
+        roomRef.current.disconnect();
+        roomRef.current = null;
       }
     };
-  }, [roomName, userHoldingPercent]); // 持仓或房间变化时重新连接
+  }, [roomName]); // 只在房间名变化时重连，持仓变化不重连
 
   // 渲染连接状态
   if (connecting) {
