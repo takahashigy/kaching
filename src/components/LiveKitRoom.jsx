@@ -107,21 +107,22 @@ export default function LiveKitRoom({
 
   // 切换麦克风
   const toggleMicrophone = useCallback(async () => {
-    console.log('🎤 toggleMicrophone called, room:', !!room, 'canPublish:', canPublish, 'isMuted:', isMuted);
     if (!room || !canPublish) {
       console.log('❌ 无法切换麦克风: room=', !!room, 'canPublish=', canPublish);
       return;
     }
 
     try {
-      const enabled = !isMuted;
-      await room.localParticipant.setMicrophoneEnabled(enabled);
-      setIsMuted(!enabled);
-      console.log('✅ 麦克风已切换:', enabled ? '开启' : '关闭');
+      setIsMuted((prevMuted) => {
+        const newEnabled = !prevMuted;
+        console.log('🎤 切换麦克风: 当前静音=', prevMuted, '→ 新状态=', newEnabled ? '开启' : '静音');
+        room.localParticipant.setMicrophoneEnabled(newEnabled);
+        return !newEnabled;
+      });
     } catch (err) {
       console.error('Toggle microphone error:', err);
     }
-  }, [room, isMuted, canPublish]);
+  }, [room, canPublish]);
 
   // 初始化连接
   useEffect(() => {
