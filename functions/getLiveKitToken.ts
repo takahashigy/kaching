@@ -1,5 +1,5 @@
-import { AccessToken } from "npm:livekit-server-sdk@^2.0.0";
-import { createClientFromRequest } from "jsr:@base44/sdk@^0.8.11";
+import { AccessToken } from "npm:livekit-server-sdk@2.6.0";
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.6";
 
 Deno.serve(async (req) => {
   try {
