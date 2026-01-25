@@ -4,6 +4,28 @@ import { Mic, MicOff, Volume2, Users, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+// 根据持仓%计算发言时长和冷却时间
+function getSpeakingLimits(holdingPercent) {
+  const h = Number(holdingPercent) || 0;
+  
+  if (h >= 4) {
+    // 宗主
+    return { speakDuration: 180, cooldown: 30, title: '宗主' };
+  } else if (h >= 1) {
+    // 护法
+    return { speakDuration: 120, cooldown: 45, title: '护法' };
+  } else if (h >= 0.5) {
+    // 堂主
+    return { speakDuration: 60, cooldown: 60, title: '堂主' };
+  } else if (h >= 0.01) {
+    // 散户
+    return { speakDuration: 30, cooldown: 90, title: '散户' };
+  } else {
+    // 无持仓
+    return { speakDuration: 0, cooldown: 0, title: '游客' };
+  }
+}
+
 export default function LiveKitRoom({ 
   roomName, 
   userHoldingPercent = 0,
@@ -18,6 +40,11 @@ export default function LiveKitRoom({
   const [participants, setParticipants] = useState([]);
   const [error, setError] = useState(null);
   const [canPublish, setCanPublish] = useState(false);
+  
+  // 发言时长和冷却时间
+  const [remainingTime, setRemainingTime] = useState(0);
+  const [cooldownTime, setCooldownTime] = useState(0);
+  const [isOnCooldown, setIsOnCooldown] = useState(false);
 
   // 连接到 LiveKit 房间
   const connectToRoom = useCallback(async () => {
@@ -112,17 +139,74 @@ export default function LiveKitRoom({
       return;
     }
 
+    if (isOnCooldown) {
+      console.log('❌ 冷却中，无法发言');
+      return;
+    }
+
     try {
-      setIsMuted((prevMuted) => {
-        const enabled = !prevMuted;
-        console.log('🎤 切换麦克风: 当前静音=', prevMuted, '→', enabled ? '开启麦克风' : '关闭麦克风');
-        room.localParticipant.setMicrophoneEnabled(enabled);
-        return !prevMuted;
-      });
+      if (isMuted) {
+        // 开启麦克风
+        const limits = getSpeakingLimits(userHoldingPercent);
+        await room.localParticipant.setMicrophoneEnabled(true);
+        setIsMuted(false);
+        setRemainingTime(limits.speakDuration);
+        console.log('✅ 开启麦克风，可发言', limits.speakDuration, '秒');
+      } else {
+        // 关闭麦克风
+        await room.localParticipant.setMicrophoneEnabled(false);
+        setIsMuted(true);
+        setRemainingTime(0);
+        console.log('✅ 关闭麦克风');
+      }
     } catch (err) {
       console.error('Toggle microphone error:', err);
     }
-  }, [room, canPublish]);
+  }, [room, canPublish, isMuted, isOnCooldown, userHoldingPercent]);
+
+  // 倒计时逻辑
+  useEffect(() => {
+    if (!isMuted && remainingTime > 0) {
+      const timer = setInterval(() => {
+        setRemainingTime((prev) => {
+          if (prev <= 1) {
+            // 时间到，自动关闭麦克风并进入冷却
+            if (room) {
+              room.localParticipant.setMicrophoneEnabled(false);
+            }
+            setIsMuted(true);
+            
+            const limits = getSpeakingLimits(userHoldingPercent);
+            setIsOnCooldown(true);
+            setCooldownTime(limits.cooldown);
+            console.log('⏰ 发言时间到，进入冷却', limits.cooldown, '秒');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [isMuted, remainingTime, room, userHoldingPercent]);
+
+  // 冷却倒计时
+  useEffect(() => {
+    if (isOnCooldown && cooldownTime > 0) {
+      const timer = setInterval(() => {
+        setCooldownTime((prev) => {
+          if (prev <= 1) {
+            setIsOnCooldown(false);
+            console.log('✅ 冷却结束');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [isOnCooldown, cooldownTime]);
 
   // 初始化连接
   useEffect(() => {
@@ -186,31 +270,45 @@ export default function LiveKitRoom({
       {/* 麦克风控制 */}
       <Button
         onClick={toggleMicrophone}
-        disabled={!canPublish}
+        disabled={!canPublish || isOnCooldown}
         className={cn(
           "w-full py-6 text-base font-medium transition-all",
-          isMuted 
-            ? "bg-gray-700 hover:bg-gray-600" 
-            : isSpeaking
-              ? "bg-gradient-to-r from-cyan-500 to-purple-600 animate-pulse"
-              : "bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
+          isOnCooldown
+            ? "bg-gray-600 cursor-not-allowed"
+            : isMuted 
+              ? "bg-gray-700 hover:bg-gray-600" 
+              : isSpeaking
+                ? "bg-gradient-to-r from-cyan-500 to-purple-600 animate-pulse"
+                : "bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
         )}
       >
-        <div className="flex items-center gap-3">
-          {isMuted ? (
-            <MicOff className="w-5 h-5" />
-          ) : (
-            <Mic className="w-5 h-5" />
+        <div className="flex flex-col items-center gap-1">
+          <div className="flex items-center gap-3">
+            {isMuted ? (
+              <MicOff className="w-5 h-5" />
+            ) : (
+              <Mic className="w-5 h-5" />
+            )}
+            <span>
+              {!canPublish 
+                ? `需要持仓 ≥ 0.01% 才能发言` 
+                : isOnCooldown
+                  ? `冷却中 ${cooldownTime}s`
+                  : isMuted 
+                    ? `点击发言 (${getSpeakingLimits(userHoldingPercent).title})` 
+                    : `发言中 ${remainingTime}s`}
+            </span>
+          </div>
+          {!isMuted && remainingTime > 0 && (
+            <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+              <div 
+                className="bg-cyan-400 h-1.5 rounded-full transition-all duration-1000"
+                style={{ 
+                  width: `${(remainingTime / getSpeakingLimits(userHoldingPercent).speakDuration) * 100}%` 
+                }}
+              />
+            </div>
           )}
-          <span>
-            {!canPublish 
-              ? `需要持仓 ≥ 0.01% 才能发言` 
-              : isMuted 
-                ? "点击发言" 
-                : isSpeaking 
-                  ? "正在说话..." 
-                  : "静音"}
-          </span>
         </div>
       </Button>
 
