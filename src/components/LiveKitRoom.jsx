@@ -118,7 +118,7 @@ export default function LiveKitRoom({
         room.disconnect();
       }
     };
-  }, [roomName]); // 只在 roomName 变化时重新连接
+  }, [connectToRoom]); // 持仓或房间变化时重新连接
 
   // 渲染连接状态
   if (connecting) {
