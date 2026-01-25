@@ -115,12 +115,19 @@ export default function LiveKitRoom({
         onSpeakingChange?.(localIsSpeaking);
       });
 
-      // 监听本地音频轨道音量
+      // 监听本地音频轨道发布
       newRoom.on(RoomEvent.LocalTrackPublished, (publication) => {
         if (publication.kind === Track.Kind.Audio) {
-          publication.track?.on('audioLevelChanged', (level) => {
-            setAudioLevel(level);
-          });
+          console.log('🎤 本地音频轨道已发布，开始监听音量');
+
+          // 监听音频级别变化
+          const track = publication.audioTrack;
+          if (track) {
+            track.on('audioLevelChanged', (level) => {
+              console.log('🔊 音量:', level);
+              setAudioLevel(level);
+            });
+          }
         }
       });
 
@@ -194,6 +201,33 @@ export default function LiveKitRoom({
       alert('麦克风开启失败: ' + err.message);
     }
   }, [room, canPublish, isMuted, isOnCooldown, userHoldingPercent]);
+
+  // 实时监听麦克风音量（使用RAF持续读取）
+  useEffect(() => {
+    if (!room || isMuted) {
+      setAudioLevel(0);
+      return;
+    }
+
+    let rafId;
+    const updateAudioLevel = () => {
+      const audioTracks = Array.from(room.localParticipant.audioTracks.values());
+      if (audioTracks.length > 0) {
+        const track = audioTracks[0].audioTrack;
+        if (track) {
+          // getSpeakerLevel() 返回 0-1 的音量值
+          const level = track.getSpeakerLevel?.() || 0;
+          setAudioLevel(level);
+        }
+      }
+      rafId = requestAnimationFrame(updateAudioLevel);
+    };
+
+    rafId = requestAnimationFrame(updateAudioLevel);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [room, isMuted]);
 
   // 倒计时逻辑
   useEffect(() => {
