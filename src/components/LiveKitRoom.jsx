@@ -58,6 +58,9 @@ export default function LiveKitRoom({
   
   // 排队位置（模拟）
   const [queuePosition, setQueuePosition] = useState(0);
+  
+  // ✅ 记录当前正在发言的远程用户
+  const [remoteSpeakers, setRemoteSpeakers] = useState([]);
 
   // 连接到 LiveKit 房间
   const connectToRoom = useCallback(async (forceReconnect = false) => {
@@ -72,6 +75,8 @@ export default function LiveKitRoom({
     // 断开旧连接
     if (roomRef.current) {
       console.log('🔌 断开旧连接');
+      // ✅ 清理所有远程音频元素
+      document.querySelectorAll('audio[id^="audio-"]').forEach(el => el.remove());
       await roomRef.current.disconnect();
       roomRef.current = null;
       setRoom(null);
@@ -110,6 +115,8 @@ export default function LiveKitRoom({
       const newRoom = new Room({
         adaptiveStream: true,
         dynacast: true,
+        // ✅ 确保自动订阅所有轨道
+        autoSubscribe: true,
       });
       
       roomRef.current = newRoom;
@@ -126,11 +133,16 @@ export default function LiveKitRoom({
       });
 
       // 监听参与者变化
-      newRoom.on(RoomEvent.ParticipantConnected, () => {
+      newRoom.on(RoomEvent.ParticipantConnected, (participant) => {
+        console.log('👋 参与者加入:', participant.identity);
         updateParticipants(newRoom);
       });
       
-      newRoom.on(RoomEvent.ParticipantDisconnected, () => {
+      newRoom.on(RoomEvent.ParticipantDisconnected, (participant) => {
+        console.log('👋 参与者离开:', participant.identity);
+        // 清理该参与者的音频元素
+        const audioEl = document.getElementById(`audio-${participant.identity}`);
+        if (audioEl) audioEl.remove();
         updateParticipants(newRoom);
       });
 
@@ -139,9 +151,62 @@ export default function LiveKitRoom({
         const localIsSpeaking = speakers.some(
           s => s.identity === newRoom.localParticipant?.identity
         );
-        console.log('🗣️ ActiveSpeakers changed, local isSpeaking:', localIsSpeaking);
+        console.log('🗣️ ActiveSpeakers changed:', speakers.map(s => s.identity), 'local isSpeaking:', localIsSpeaking);
         setIsSpeaking(localIsSpeaking);
         onSpeakingChange?.(localIsSpeaking);
+        
+        // ✅ 更新远程发言者列表
+        const remote = speakers.filter(s => s.identity !== newRoom.localParticipant?.identity);
+        setRemoteSpeakers(remote.map(s => ({
+          identity: s.identity,
+          name: s.name || s.identity
+        })));
+      });
+
+      // ✅✅✅ 关键：监听远程音频轨道订阅，自动播放
+      newRoom.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+        console.log('🔊 TrackSubscribed:', track.kind, 'from', participant.identity);
+        
+        if (track.kind === Track.Kind.Audio) {
+          // 创建音频元素并播放
+          const audioElement = track.attach();
+          audioElement.id = `audio-${participant.identity}`;
+          audioElement.setAttribute('autoplay', 'true');
+          audioElement.setAttribute('playsinline', 'true');
+          // 确保音量正常
+          audioElement.volume = 1.0;
+          document.body.appendChild(audioElement);
+          
+          // 尝试播放（处理自动播放策略）
+          audioElement.play().catch(e => {
+            console.warn('⚠️ 自动播放被阻止，需要用户交互:', e);
+          });
+          
+          console.log('✅ 远程音频已附加并播放:', participant.identity);
+        }
+      });
+
+      // ✅ 监听远程音频轨道取消订阅，移除音频元素
+      newRoom.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+        console.log('🔇 TrackUnsubscribed:', track.kind, 'from', participant.identity);
+        
+        if (track.kind === Track.Kind.Audio) {
+          const elements = track.detach();
+          elements.forEach(el => el.remove());
+          // 也移除我们创建的元素
+          const audioEl = document.getElementById(`audio-${participant.identity}`);
+          if (audioEl) audioEl.remove();
+          console.log('✅ 远程音频已移除:', participant.identity);
+        }
+      });
+
+      // ✅ 监听轨道静音状态变化
+      newRoom.on(RoomEvent.TrackMuted, (publication, participant) => {
+        console.log('🔇 TrackMuted:', publication.kind, 'from', participant.identity);
+      });
+
+      newRoom.on(RoomEvent.TrackUnmuted, (publication, participant) => {
+        console.log('🔊 TrackUnmuted:', publication.kind, 'from', participant.identity);
       });
 
       // ① 先连接
@@ -151,13 +216,33 @@ export default function LiveKitRoom({
       
       // ② 连接成功后立即设置音量监听
       newRoom.localParticipant.on(ParticipantEvent.AudioLevelChanged, (level) => {
-        console.log('🔊 audioLevel changed:', level);
+        if (level > 0.01) {
+          console.log('🔊 audioLevel changed:', level);
+        }
         setAudioLevel(level);
       });
       
       newRoom.localParticipant.on(ParticipantEvent.IsSpeakingChanged, (speaking) => {
         console.log('🗣️ isSpeaking changed:', speaking);
         setIsSpeaking(speaking);
+      });
+      
+      // ✅ 处理已经存在的远程参与者的音频轨道
+      newRoom.remoteParticipants.forEach((participant) => {
+        participant.audioTrackPublications.forEach((publication) => {
+          if (publication.track && publication.isSubscribed) {
+            console.log('🔊 处理已存在的音频轨道:', participant.identity);
+            const audioElement = publication.track.attach();
+            audioElement.id = `audio-${participant.identity}`;
+            audioElement.setAttribute('autoplay', 'true');
+            audioElement.setAttribute('playsinline', 'true');
+            audioElement.volume = 1.0;
+            document.body.appendChild(audioElement);
+            audioElement.play().catch(e => {
+              console.warn('⚠️ 自动播放被阻止:', e);
+            });
+          }
+        });
       });
       
       setRoom(newRoom);
@@ -300,7 +385,7 @@ export default function LiveKitRoom({
       const normalized = Math.min(1, average / 128); // 归一化到 0-1
       
       if (normalized > 0.01) {
-        console.log('🔊 本地音量:', normalized.toFixed(2));
+        // console.log('🔊 本地音量:', normalized.toFixed(2));
       }
       setAudioLevel(normalized);
       
@@ -372,6 +457,8 @@ export default function LiveKitRoom({
     return () => {
       if (roomRef.current) {
         console.log('🔌 组件卸载，断开连接');
+        // ✅ 清理所有远程音频元素
+        document.querySelectorAll('audio[id^="audio-"]').forEach(el => el.remove());
         roomRef.current.disconnect();
         roomRef.current = null;
       }
@@ -431,6 +518,18 @@ export default function LiveKitRoom({
           <span className="text-sm">{participants.length + 1}</span>
         </div>
       </div>
+
+      {/* ✅ 显示谁正在发言（远程用户） */}
+      {remoteSpeakers.length > 0 && (
+        <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
+          <div className="flex items-center gap-2">
+            <Volume2 className="w-4 h-4 text-purple-400 animate-pulse" />
+            <span className="text-sm text-purple-300">
+              正在发言: {remoteSpeakers.map(s => s.name).join(', ')}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* 正在发言浮条 */}
       {!isMuted && (
