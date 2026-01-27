@@ -76,7 +76,7 @@ export default function TokenCard({ token, rank, showRank = false }) {
         {showRank && (
           <div
             className={cn(
-              "absolute -bottom-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg z-50",
+              "absolute -bottom-3 right-2 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg z-50",
               rank === 1 ? "bg-gradient-to-br from-amber-400 to-orange-500" :
               rank === 2 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800" :
               rank === 3 ? "bg-gradient-to-br from-amber-600 to-amber-700" :
