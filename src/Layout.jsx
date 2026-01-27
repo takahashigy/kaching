@@ -47,7 +47,7 @@ export default function Layout({ children }) {
         <div className="hidden lg:flex h-screen">
           <SideNav />
           <main className="flex-1 overflow-y-auto">
-            <div className="max-w-6xl mx-auto py-8 px-6">
+            <div className="max-w-7xl mx-auto py-10 px-8">
               {children}
             </div>
           </main>

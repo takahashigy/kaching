@@ -56,7 +56,7 @@ export default function SideNav() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-6 space-y-2">
         {navItems.map((item) => {
           const isActive = currentPath === createPageUrl(item.name);
           const Icon = item.icon;
@@ -66,14 +66,17 @@ export default function SideNav() {
               key={item.name}
               to={createPageUrl(item.name)}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
+                "flex items-center gap-4 px-5 py-4 rounded-xl transition-all group",
                 isActive
-                  ? "bg-gray-800/80 text-white shadow-lg"
+                  ? "bg-gray-800/80 text-white shadow-lg shadow-gray-900/50"
                   : "text-gray-400 hover:bg-gray-800/50 hover:text-gray-300"
               )}
             >
-              <Icon className={cn("w-5 h-5", isActive && item.color)} />
-              <span className="font-medium">{item.label}</span>
+              <Icon className={cn(
+                "w-6 h-6 transition-transform group-hover:scale-110", 
+                isActive && item.color
+              )} />
+              <span className="font-semibold text-base">{item.label}</span>
             </Link>
           );
         })}

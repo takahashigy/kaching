@@ -105,9 +105,143 @@ export default function PopularCarousel({ tokens = [] }) {
 
   return (
     <div className="relative">
-      {/* Carousel container */}
+      {/* Desktop Grid View */}
+      <div className="hidden lg:grid lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {tokens.slice(0, 8).map((token, index) => {
+          const logoSrc = getLogoSrc(token);
+          const imgOk = imgOkMap[token.id] !== false;
+          const showImage = Boolean(logoSrc) && imgOk;
+
+          return (
+            <Link
+              key={token.id}
+              to={createPageUrl(`Room?id=${token.id}`)}
+              className="block group"
+            >
+              <div
+                className={cn(
+                  "relative rounded-2xl transition-all duration-300 overflow-hidden",
+                  "bg-gradient-to-br from-[#1a1f3a] to-[#0f1229]",
+                  "hover:scale-105 hover:shadow-2xl",
+                  "border-2",
+                  token.tier === "GOLD" && "border-amber-500/50 hover:border-amber-500/70 hover:shadow-amber-500/30",
+                  token.tier === "PURPLE" && "border-purple-500/50 hover:border-purple-500/70 hover:shadow-purple-500/30",
+                  token.tier === "BLUE" && "border-cyan-500/50 hover:border-cyan-500/70 hover:shadow-cyan-500/30"
+                )}
+              >
+                {/* Waveform background */}
+                <div className="absolute inset-0 opacity-10 pointer-events-none">
+                  <WaveformIcon
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-[3]"
+                    color={
+                      token.tier === "GOLD" ? "orange" :
+                      token.tier === "PURPLE" ? "purple" : "cyan"
+                    }
+                  />
+                </div>
+
+                {/* Rank badge */}
+                <div
+                  className={cn(
+                    "absolute -top-2.5 -right-2.5 w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg z-20",
+                    index === 0 ? "bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-500/50" :
+                    index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800" :
+                    index === 2 ? "bg-gradient-to-br from-amber-600 to-amber-700" :
+                    "bg-gradient-to-br from-cyan-500 to-purple-600"
+                  )}
+                >
+                  {index + 1}
+                </div>
+
+                <div className="relative p-4 pt-5">
+                  {/* Token avatar and info */}
+                  <div className="flex flex-col items-center mb-4">
+                    <div
+                      className={cn(
+                        "w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center text-2xl font-bold mb-2 border-2",
+                        "bg-gradient-to-br shadow-lg",
+                        token.tier === "GOLD"
+                          ? "from-amber-500/30 to-orange-600/30 text-amber-400 border-amber-500/50 shadow-amber-500/30"
+                          : token.tier === "PURPLE"
+                          ? "from-purple-500/30 to-pink-600/30 text-purple-400 border-purple-500/50 shadow-purple-500/30"
+                          : "from-cyan-500/30 to-blue-600/30 text-cyan-400 border-cyan-500/50 shadow-cyan-500/30"
+                      )}
+                    >
+                      {showImage ? (
+                        <img
+                          src={logoSrc}
+                          alt={token?.name || token?.ticker || "token"}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={() => markImgFailed(token.id)}
+                        />
+                      ) : (
+                        <span>{token.ticker?.slice(0, 2) || "??"}</span>
+                      )}
+                    </div>
+
+                    <div className="text-center min-w-0 w-full">
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <span className="font-bold text-white text-lg truncate">
+                          ${token.ticker}
+                        </span>
+                        <TierBadge tier={token.tier} size="sm" />
+                      </div>
+                      <p className="text-gray-400 text-xs truncate">
+                        {token.name}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Stats grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-gray-400 text-[10px]">市值</div>
+                        <div className="text-white font-bold text-xs truncate">
+                          ${formatNumber(token.marketCap)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
+                      <Headphones className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-gray-400 text-[10px]">听众</div>
+                        <div className="text-white font-bold text-xs">
+                          {token.listeners || 0}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
+                      <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-gray-400 text-[10px]">热度</div>
+                        <div className="text-white font-bold text-xs">
+                          +{token.joinVelocity || 0}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
+                      <Users className="w-4 h-4 text-purple-400 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-gray-400 text-[10px]">持有</div>
+                        <div className="text-white font-bold text-xs">
+                          {token.holders || 0}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Mobile Carousel View */}
       <div
-        className="relative h-[280px] overflow-visible"
+        className="relative h-[280px] overflow-visible lg:hidden"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -278,8 +412,8 @@ export default function PopularCarousel({ tokens = [] }) {
         </div>
       </div>
 
-      {/* Pagination dots */}
-      <div className="flex justify-center gap-2 mt-4">
+      {/* Pagination dots - Mobile only */}
+      <div className="flex justify-center gap-2 mt-4 lg:hidden">
         {tokens.map((_, index) => (
           <button
             key={index}
