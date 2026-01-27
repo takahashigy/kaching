@@ -283,7 +283,7 @@ export default function PopularCarousel({ tokens = [] }) {
                   >
                     <div
                       className={cn(
-                        "relative w-[82vw] max-w-[280px] rounded-2xl transition-all duration-300 overflow-hidden",
+                        "relative w-[82vw] max-w-[280px] md:max-w-[360px] rounded-2xl transition-all duration-300 overflow-hidden",
                         "bg-gradient-to-br from-[#1a1f3a] to-[#0f1229]",
                         offset === 0 && "shadow-2xl",
                         "border-2",
