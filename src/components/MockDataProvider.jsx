@@ -239,8 +239,12 @@ export function MockDataProvider({ children }) {
   /* ----------------------------- */
   /* Wallet state (REAL)           */
   /* ----------------------------- */
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [userAddress, setUserAddress] = useState(null);
+  const [walletConnected, setWalletConnected] = useState(() => {
+    return localStorage.getItem('walletConnected') === 'true';
+  });
+  const [userAddress, setUserAddress] = useState(() => {
+    return localStorage.getItem('userAddress') || null;
+  });
   const [walletProvider, setWalletProvider] = useState(null);
 
   // userHolding = 持仓占比 (%)，用于驱动 TitleBadge / SpeakButton
@@ -351,6 +355,8 @@ export function MockDataProvider({ children }) {
       setWalletConnected(true);
       setUserAddress(addr);
       setWalletProvider(provider);
+      localStorage.setItem('walletConnected', 'true');
+      localStorage.setItem('userAddress', addr);
       console.log("🎉 钱包连接成功:", addr);
 
       return addr;
@@ -370,6 +376,8 @@ export function MockDataProvider({ children }) {
     setUserAddress(null);
     setWalletProvider(null);
     setUserHolding(0);
+    localStorage.removeItem('walletConnected');
+    localStorage.removeItem('userAddress');
   }, []);
 
   const toggleWallet = useCallback(async () => {
@@ -386,6 +394,21 @@ export function MockDataProvider({ children }) {
    * - accountsChanged: 切换账号/断开
    * - chainChanged: 切换网络（BSC/ETH...）
    */
+  // 页面加载时自动重连
+  useEffect(() => {
+    const savedConnected = localStorage.getItem('walletConnected');
+    const savedAddress = localStorage.getItem('userAddress');
+    
+    if (savedConnected === 'true' && savedAddress && isWalletAvailable()) {
+      console.log("🔄 自动重连钱包...");
+      connectWallet().catch(err => {
+        console.error("自动重连失败:", err);
+        localStorage.removeItem('walletConnected');
+        localStorage.removeItem('userAddress');
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (!isWalletAvailable()) return;
 
@@ -398,6 +421,7 @@ export function MockDataProvider({ children }) {
       // 账号变了：保持 connected，但需要刷新 holding
       setWalletConnected(true);
       setUserAddress(a);
+      localStorage.setItem('userAddress', a);
       // provider 仍可用（BrowserProvider 会跟随 window.ethereum）
       // holding 交给 Room 进入时或手动刷新去算
       setUserHolding(0);
