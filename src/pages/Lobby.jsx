@@ -37,9 +37,17 @@ export default function Lobby() {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-6 overflow-x-hidden">
-      {/* Header */}
-      <div className="mb-6">
+    <div className="w-full">
+      {/* Header - Desktop only (mobile uses SideNav stats) */}
+      <div className="mb-8 lg:block hidden">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+          模音
+        </h1>
+        <p className="text-gray-400 text-lg">当 Meme 长了嘴巴</p>
+      </div>
+
+      {/* Mobile Header */}
+      <div className="mb-6 lg:hidden px-4">
         <div className="flex items-center justify-between min-w-0">
           <div className="flex-1">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-1">
@@ -82,14 +90,14 @@ export default function Lobby() {
       </div>
 
       {/* Popular Now Section - Carousel */}
-      <section className="mb-8 -mx-4 px-4 overflow-x-hidden">
-        <div className="flex items-center gap-3 mb-5">
+      <section className="mb-10 lg:mb-12 lg:-mx-0 -mx-4 px-4 lg:px-0 overflow-x-hidden">
+        <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
             <WaveformIcon color="cyan" animate />
           </div>
           <div>
-            <h2 className="font-bold text-lg text-white">热门房间</h2>
-            <p className="text-gray-400 text-xs">Slide to browse</p>
+            <h2 className="font-bold text-xl text-white">热门房间</h2>
+            <p className="text-gray-400 text-sm">Slide to browse</p>
           </div>
         </div>
         
@@ -104,15 +112,15 @@ export default function Lobby() {
       </section>
 
       {/* Live Rooms Section */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
+      <section className="lg:px-0 px-4">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center">
               <WaveformIcon color="green" animate />
             </div>
             <div>
-              <h2 className="font-bold text-lg text-white">直播中</h2>
-              <p className="text-gray-400 text-xs">直播中 {activeTokens.length} 个房间</p>
+              <h2 className="font-bold text-xl text-white">直播中</h2>
+              <p className="text-gray-400 text-sm">直播中 {activeTokens.length} 个房间</p>
             </div>
           </div>
           
@@ -148,7 +156,7 @@ export default function Lobby() {
           </div>
         </div>
         
-        <div className="grid gap-2.5">
+        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
           {activeTokens.map(token => (
             <TokenCard key={token.id} token={token} />
           ))}
