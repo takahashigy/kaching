@@ -9,9 +9,9 @@ export default function PurpleRanking() {
   const purpleTokens = getPurpleRanking();
 
   return (
-    <div className="max-w-md mx-auto px-4 py-6">
+    <div className="w-full lg:px-0 px-4 lg:py-0 py-6">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30">
             <Trophy className="w-6 h-6 text-purple-400" />
@@ -51,7 +51,7 @@ export default function PurpleRanking() {
 
       {/* Ranking List */}
       {purpleTokens.length > 0 ? (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {purpleTokens.map((token, index) => (
             <div key={token.id} className="relative">
               {/* Rank indicator */}

@@ -9,7 +9,7 @@ export default function GoldFeatured() {
   const goldTokens = getGoldFeatured();
 
   return (
-    <div className="w-full">
+    <div className="w-full lg:px-0 px-4">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">

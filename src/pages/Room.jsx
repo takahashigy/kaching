@@ -126,8 +126,8 @@ export default function Room() {
   const roomName = token?.roomId || `room-${token?.contractAddress || tokenId}`;
 
   return (
-    <div className="max-w-md mx-auto">
-      <div className="sticky top-0 z-40 bg-gray-950/90 backdrop-blur-xl border-b border-gray-800/50">
+    <div className="w-full lg:max-w-4xl lg:mx-auto">
+      <div className="sticky top-0 z-40 bg-gray-950/90 backdrop-blur-xl border-b border-gray-800/50 lg:rounded-b-xl">
         <div className="flex items-center justify-between px-4 py-3">
           <Link to={createPageUrl('Lobby')} className="p-2 -ml-2 rounded-lg hover:bg-gray-800">
             <ArrowLeft className="w-5 h-5" />

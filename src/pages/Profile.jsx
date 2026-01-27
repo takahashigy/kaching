@@ -54,15 +54,15 @@ export default function Profile() {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-6">
+    <div className="w-full">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-1">个人资料</h1>
-        <p className="text-gray-500 text-xs">管理你的账户信息</p>
+      <div className="mb-8 lg:px-0 px-4">
+        <h1 className="text-3xl font-bold mb-2">个人资料</h1>
+        <p className="text-gray-400">管理你的账户信息</p>
       </div>
 
       {/* Profile card */}
-      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-3xl p-6 mb-6 border border-gray-700">
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-3xl p-6 lg:p-8 mb-6 border border-gray-700 lg:max-w-2xl lg:mx-0 mx-4">
         {/* Avatar section */}
         <div className="flex flex-col items-center mb-6">
           <div className="relative group">

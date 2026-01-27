@@ -11,9 +11,9 @@ export default function Watchlist() {
   const watchlistTokens = getWatchlistTokens();
 
   return (
-    <div className="max-w-md mx-auto px-4 py-6">
+    <div className="w-full lg:px-0 px-4 lg:py-0 py-6">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30">
             <Bookmark className="w-6 h-6 text-cyan-400" />
@@ -29,7 +29,7 @@ export default function Watchlist() {
 
       {/* Watchlist */}
       {watchlistTokens.length > 0 ? (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
           {watchlistTokens.map(token => (
             <TokenCard key={token.id} token={token} />
           ))}
