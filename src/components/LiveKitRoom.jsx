@@ -9,19 +9,14 @@ function getSpeakingLimits(holdingPercent) {
   const h = Number(holdingPercent) || 0;
   
   if (h >= 4) {
-    // 宗主
     return { speakDuration: 180, cooldown: 30, title: '宗主' };
   } else if (h >= 1) {
-    // 护法
     return { speakDuration: 120, cooldown: 45, title: '护法' };
   } else if (h >= 0.5) {
-    // 堂主
     return { speakDuration: 60, cooldown: 60, title: '堂主' };
   } else if (h >= 0.01) {
-    // 散户
     return { speakDuration: 30, cooldown: 90, title: '散户' };
   } else {
-    // 无持仓
     return { speakDuration: 0, cooldown: 0, title: '游客' };
   }
 }
@@ -46,6 +41,9 @@ export default function LiveKitRoom({
   const connectingRef = useRef(false);
   const roomRef = useRef(null);
   
+  // ✅ 记录 Token 生成时的持仓状态，用于判断是否需要重连
+  const tokenCanPublishRef = useRef(false);
+  
   // 发言时长和冷却时间
   const [remainingTime, setRemainingTime] = useState(0);
   const [cooldownTime, setCooldownTime] = useState(0);
@@ -62,11 +60,11 @@ export default function LiveKitRoom({
   const [queuePosition, setQueuePosition] = useState(0);
 
   // 连接到 LiveKit 房间
-  const connectToRoom = useCallback(async () => {
-    console.log('🔌 connectToRoom 开始, roomName:', roomName, 'userHoldingPercent:', userHoldingPercent);
+  const connectToRoom = useCallback(async (forceReconnect = false) => {
+    console.log('🔌 connectToRoom 开始, roomName:', roomName, 'userHoldingPercent:', userHoldingPercent, 'forceReconnect:', forceReconnect);
     
-    // 防止重复连接
-    if (connectingRef.current) {
+    // 防止重复连接（除非强制重连）
+    if (connectingRef.current && !forceReconnect) {
       console.log('⚠️ 已经在连接中，跳过');
       return;
     }
@@ -102,8 +100,11 @@ export default function LiveKitRoom({
         throw new Error(data?.error || data?.message || 'Failed to get token');
       }
 
-      const { token, wsUrl } = data;
-      console.log('✅ 后端返回 token，持仓%:', userHoldingPercent);
+      const { token, wsUrl, canPublish: serverCanPublish } = data;
+      
+      // ✅ 记录这个 Token 的发言权限
+      tokenCanPublishRef.current = serverCanPublish;
+      console.log('✅ 后端返回 token，canPublish:', serverCanPublish, '持仓%:', userHoldingPercent);
 
       // 创建 Room 实例
       const newRoom = new Room({
@@ -193,6 +194,14 @@ export default function LiveKitRoom({
       return;
     }
 
+    // ✅ 检查当前 Token 是否有发言权限，如果没有则重连获取新 Token
+    if (!tokenCanPublishRef.current) {
+      console.log('⚠️ 当前 Token 无发言权限，重新连接获取新 Token...');
+      alert('正在更新权限，请稍后再试...');
+      await connectToRoom(true); // 强制重连
+      return;
+    }
+
     // 检查是否在冷却中
     if (isOnCooldown) {
       console.log('❌ 冷却中，无法发言');
@@ -259,9 +268,17 @@ export default function LiveKitRoom({
       }
     } catch (err) {
       console.error('❌ Toggle microphone error:', err);
-      alert('麦克风开启失败: ' + err.message);
+      
+      // ✅ 如果是权限不足错误，提示用户并尝试重连
+      if (err.message?.includes('insufficient permissions') || err.message?.includes('permission')) {
+        console.log('⚠️ 发言权限不足，尝试重新获取 Token...');
+        alert('权限已更新，请重新点击发言按钮');
+        await connectToRoom(true); // 强制重连
+      } else {
+        alert('麦克风开启失败: ' + err.message);
+      }
     }
-  }, [room, canPublish, isMuted, isOnCooldown, cooldownTime, userHoldingPercent]);
+  }, [room, canPublish, isMuted, isOnCooldown, cooldownTime, userHoldingPercent, connectToRoom]);
 
   // 使用 Web Audio API 直接分析本地麦克风音量
   useEffect(() => {
@@ -347,8 +364,9 @@ export default function LiveKitRoom({
     }
   }, [isOnCooldown, cooldownTime]);
 
-  // 初始化连接（仅在 roomName 变化时）
+  // ✅ 初始化连接 + 持仓变化时重连（如果需要升级权限）
   useEffect(() => {
+    // 首次连接或房间名变化时连接
     connectToRoom();
 
     return () => {
@@ -358,7 +376,16 @@ export default function LiveKitRoom({
         roomRef.current = null;
       }
     };
-  }, [roomName]); // 只在房间名变化时重连，持仓变化不重连
+  }, [roomName]); // 只在房间名变化时重连
+
+  // ✅ 当持仓从不足变为足够时，自动重连获取发言权限
+  useEffect(() => {
+    // 如果现在可以发言，但 Token 没有发言权限，则重连
+    if (canPublish && !tokenCanPublishRef.current && connected && !connecting) {
+      console.log('📈 持仓已达标，重新连接获取发言权限...');
+      connectToRoom(true);
+    }
+  }, [canPublish, connected, connecting, connectToRoom]);
 
   // 渲染连接状态
   if (connecting) {
@@ -375,7 +402,7 @@ export default function LiveKitRoom({
       <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
         <p className="text-red-400 text-sm">音频连接失败: {error}</p>
         <Button 
-          onClick={connectToRoom} 
+          onClick={() => connectToRoom(true)} 
           variant="ghost" 
           size="sm" 
           className="mt-2 text-red-400"
