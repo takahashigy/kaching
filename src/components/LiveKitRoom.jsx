@@ -180,13 +180,22 @@ export default function LiveKitRoom({
 
   // 切换麦克风
   const toggleMicrophone = useCallback(async () => {
-    if (!room || !canPublish) {
-      console.log('❌ 无法切换麦克风: room=', !!room, 'canPublish=', canPublish);
+    if (!room) {
+      console.log('❌ 房间未连接');
       return;
     }
 
+    // 检查持仓是否足够
+    if (!canPublish) {
+      console.log('❌ 持仓不足，无法发言');
+      alert('持仓不足 0.01%，买点并加入吧！');
+      return;
+    }
+
+    // 检查是否在冷却中
     if (isOnCooldown) {
       console.log('❌ 冷却中，无法发言');
+      alert(`冷却中，请等待 ${cooldownTime} 秒后再试`);
       return;
     }
 
