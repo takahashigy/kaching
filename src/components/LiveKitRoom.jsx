@@ -39,7 +39,9 @@ export default function LiveKitRoom({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [participants, setParticipants] = useState([]);
   const [error, setError] = useState(null);
-  const [canPublish, setCanPublish] = useState(false);
+  
+  // 根据持仓实时计算是否可以发言
+  const canPublish = userHoldingPercent >= 0.01;
   
   const connectingRef = useRef(false);
   const roomRef = useRef(null);
@@ -100,9 +102,8 @@ export default function LiveKitRoom({
         throw new Error(data?.error || data?.message || 'Failed to get token');
       }
 
-      const { token, wsUrl, canPublish: canPub } = data;
-      console.log('✅ 后端返回 - 持仓%:', userHoldingPercent, '可发言:', canPub);
-      setCanPublish(canPub);
+      const { token, wsUrl } = data;
+      console.log('✅ 后端返回 token，持仓%:', userHoldingPercent);
 
       // 创建 Room 实例
       const newRoom = new Room({
