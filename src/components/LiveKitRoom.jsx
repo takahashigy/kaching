@@ -260,7 +260,7 @@ export default function LiveKitRoom({
       console.error('❌ Toggle microphone error:', err);
       alert('麦克风开启失败: ' + err.message);
     }
-  }, [room, canPublish, isMuted, isOnCooldown, userHoldingPercent]);
+  }, [room, canPublish, isMuted, isOnCooldown, cooldownTime, userHoldingPercent]);
 
   // 使用 Web Audio API 直接分析本地麦克风音量
   useEffect(() => {
