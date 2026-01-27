@@ -25,9 +25,11 @@ export default function SideNav() {
       {/* Logo */}
       <div className="p-6 border-b border-gray-800/50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center">
-            <span className="text-xl font-bold">K</span>
-          </div>
+          <img 
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/697470f9e755b7b2d281bfab/0033dc7b5_logo.png" 
+            alt="KaChing Logo"
+            className="w-10 h-10 object-contain"
+          />
           <div>
             <h1 className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
               KaChing
