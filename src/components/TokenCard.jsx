@@ -49,7 +49,7 @@ export default function TokenCard({ token, rank, showRank = false }) {
     <Link to={createPageUrl(`Room?id=${token.id}`)} className="block w-full">
       <div
         className={cn(
-          "relative w-full p-3 rounded-2xl border transition-all duration-300 overflow-hidden",
+          "relative w-full p-3 rounded-2xl border transition-all duration-300",
           "bg-gradient-to-br from-[#1a1f3a]/80 to-[#0f1229]/50",
           "border-gray-700/50 hover:border-gray-600",
           "backdrop-blur-xl hover:scale-[1.02]",
@@ -59,7 +59,7 @@ export default function TokenCard({ token, rank, showRank = false }) {
         )}
       >
         {/* Waveform background */}
-        <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-5 pointer-events-none">
+        <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-5 pointer-events-none overflow-hidden rounded-2xl">
           <WaveformIcon
             className="absolute top-1/2 right-4 -translate-y-1/2 scale-[2]"
             color={
@@ -76,7 +76,7 @@ export default function TokenCard({ token, rank, showRank = false }) {
         {showRank && (
           <div
             className={cn(
-              "absolute -top-3 -left-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg z-10",
+              "absolute -top-3 -left-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg z-50",
               rank === 1 ? "bg-gradient-to-br from-amber-400 to-orange-500" :
               rank === 2 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800" :
               rank === 3 ? "bg-gradient-to-br from-amber-600 to-amber-700" :

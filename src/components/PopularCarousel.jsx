@@ -109,7 +109,7 @@ export default function PopularCarousel({ tokens = [] }) {
       {/* Desktop Grid View - using TokenCard for consistency */}
       <div className="hidden lg:grid lg:grid-cols-2 xl:grid-cols-3 gap-3">
         {tokens.slice(0, 6).map((token, index) => (
-          <div key={token.id} className="relative">
+          <div key={token.id} className="relative overflow-visible">
             <TokenCard token={token} rank={index + 1} showRank={true} />
           </div>
         ))}
