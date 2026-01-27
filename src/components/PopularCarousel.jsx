@@ -153,12 +153,12 @@ export default function PopularCarousel({ tokens = [] }) {
                   {index + 1}
                 </div>
 
-                <div className="relative p-4 pt-5">
+                <div className="relative p-6">
                   {/* Token avatar and info */}
-                  <div className="flex flex-col items-center mb-4">
+                  <div className="flex flex-col items-center mb-6">
                     <div
                       className={cn(
-                        "w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center text-2xl font-bold mb-2 border-2",
+                        "w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center text-3xl font-bold mb-3 border-2",
                         "bg-gradient-to-br shadow-lg",
                         token.tier === "GOLD"
                           ? "from-amber-500/30 to-orange-600/30 text-amber-400 border-amber-500/50 shadow-amber-500/30"
@@ -181,52 +181,52 @@ export default function PopularCarousel({ tokens = [] }) {
                     </div>
 
                     <div className="text-center min-w-0 w-full">
-                      <div className="flex items-center justify-center gap-1.5 mb-1">
-                        <span className="font-bold text-white text-lg truncate">
+                      <div className="flex items-center justify-center gap-2 mb-1.5">
+                        <span className="font-bold text-white text-xl truncate">
                           ${token.ticker}
                         </span>
                         <TierBadge tier={token.tier} size="sm" />
                       </div>
-                      <p className="text-gray-400 text-xs truncate">
+                      <p className="text-gray-400 text-sm truncate">
                         {token.name}
                       </p>
                     </div>
                   </div>
 
                   {/* Stats grid */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
-                      <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
+                      <TrendingUp className="w-5 h-5 text-emerald-400 shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-gray-400 text-[10px]">市值</div>
-                        <div className="text-white font-bold text-xs truncate">
+                        <div className="text-gray-400 text-xs">市值</div>
+                        <div className="text-white font-bold text-sm truncate">
                           ${formatNumber(token.marketCap)}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
-                      <Headphones className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
+                      <Headphones className="w-5 h-5 text-cyan-400 shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-gray-400 text-[10px]">听众</div>
-                        <div className="text-white font-bold text-xs">
+                        <div className="text-gray-400 text-xs">听众</div>
+                        <div className="text-white font-bold text-sm">
                           {token.listeners || 0}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
-                      <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
+                      <Zap className="w-5 h-5 text-amber-400 shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-gray-400 text-[10px]">热度</div>
-                        <div className="text-white font-bold text-xs">
+                        <div className="text-gray-400 text-xs">热度</div>
+                        <div className="text-white font-bold text-sm">
                           +{token.joinVelocity || 0}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-white/5 rounded-lg p-2">
-                      <Users className="w-4 h-4 text-purple-400 shrink-0" />
+                    <div className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
+                      <Users className="w-5 h-5 text-purple-400 shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-gray-400 text-[10px]">持有</div>
-                        <div className="text-white font-bold text-xs">
+                        <div className="text-gray-400 text-xs">持有</div>
+                        <div className="text-white font-bold text-sm">
                           {token.holders || 0}
                         </div>
                       </div>
