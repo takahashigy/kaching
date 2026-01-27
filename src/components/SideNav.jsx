@@ -18,7 +18,7 @@ const navItems = [
 export default function SideNav() {
   const location = useLocation();
   const currentPath = location.pathname;
-  const { stats } = useMockData();
+  const { stats, walletConnected, toggleWallet, userAddress } = useMockData();
 
   return (
     <div className="w-64 bg-gray-900/50 backdrop-blur-xl border-r border-gray-800/50 flex flex-col">
@@ -84,7 +84,11 @@ export default function SideNav() {
 
       {/* Wallet */}
       <div className="p-4 border-t border-gray-800/50">
-        <WalletToggle />
+        <WalletToggle 
+          isConnected={walletConnected}
+          onToggle={toggleWallet}
+          userAddress={userAddress}
+        />
       </div>
     </div>
   );

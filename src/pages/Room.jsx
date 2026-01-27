@@ -23,7 +23,6 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 
 function formatNumber(num) {
   if (num >= 1000000) return '$' + (num / 1000000).toFixed(2) + 'M';
@@ -58,7 +57,6 @@ export default function Room() {
   const actualTokenId = token?.id || tokenId;
   const isWatched = actualTokenId ? watchlist.includes(actualTokenId) : false;
 
-  const [showSettings, setShowSettings] = useState(false);
   const [copiedCA, setCopiedCA] = useState(false);
   const [liveListeners, setLiveListeners] = useState(token?.listeners || 0);
   const [liveSpeakers, setLiveSpeakers] = useState(0);
@@ -297,38 +295,9 @@ export default function Room() {
                   <p className="font-bold text-lg">{Number(userHolding || 0).toFixed(2)}%</p>
                 </div>
               </div>
-
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="text-cyan-400 text-xs"
-              >
-                {showSettings ? "收起" : "调整持仓 (测试用)"}
-              </button>
-
-              {showSettings && (
-                <div className="mt-3 pt-3 border-t border-gray-700">
-                  <Slider
-                    value={[userHolding]}
-                    onValueChange={([val]) => setUserHolding(val)}
-                    max={10}
-                    step={0.1}
-                    className="mb-2"
-                  />
-                  <div className="flex justify-between text-[10px] text-gray-500">
-                    <span>0%</span>
-                    <span>0.5% 堂主</span>
-                    <span>1% 护法</span>
-                    <span>4% 宗主</span>
-                    <span>10%</span>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div>
-              <p className="text-xs text-yellow-400 mb-2">
-                DEBUG: 传给 LiveKitRoom 的 userHolding = {userHolding}
-              </p>
               <LiveKitRoom 
                 roomName={roomName}
                 userHoldingPercent={userHolding}
