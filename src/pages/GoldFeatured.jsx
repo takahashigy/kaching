@@ -9,9 +9,9 @@ export default function GoldFeatured() {
   const goldTokens = getGoldFeatured();
 
   return (
-    <div className="max-w-md mx-auto px-4 py-6">
+    <div className="w-full">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 relative">
             <Star className="w-6 h-6 text-amber-400" />
@@ -36,7 +36,7 @@ export default function GoldFeatured() {
 
       {/* Featured List */}
       {goldTokens.length > 0 ? (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
           {goldTokens.map((token, index) => (
             <div key={token.id} className="relative">
               {/* Featured badge for top token */}

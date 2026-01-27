@@ -1,5 +1,6 @@
 import React from 'react';
 import BottomNav from '@/components/BottomNav';
+import SideNav from '@/components/SideNav';
 import { MockDataProvider } from '@/components/MockDataProvider';
 
 export default function Layout({ children }) {
@@ -19,7 +20,7 @@ export default function Layout({ children }) {
           
           /* Custom scrollbar */
           ::-webkit-scrollbar {
-            width: 4px;
+            width: 8px;
           }
           ::-webkit-scrollbar-track {
             background: transparent;
@@ -42,13 +43,23 @@ export default function Layout({ children }) {
           <div className="absolute top-1/2 left-0 w-64 h-64 bg-pink-500/8 rounded-full blur-3xl" />
         </div>
         
-        {/* Main content */}
-        <main className="relative pb-20 overflow-x-hidden">
-          {children}
-        </main>
+        {/* Desktop: Side nav + content */}
+        <div className="hidden lg:flex h-screen">
+          <SideNav />
+          <main className="flex-1 overflow-y-auto">
+            <div className="max-w-6xl mx-auto py-8 px-6">
+              {children}
+            </div>
+          </main>
+        </div>
         
-        {/* Bottom navigation */}
-        <BottomNav />
+        {/* Mobile: Bottom nav + content */}
+        <div className="lg:hidden">
+          <main className="relative pb-20 overflow-x-hidden">
+            {children}
+          </main>
+          <BottomNav />
+        </div>
       </div>
     </MockDataProvider>
   );
