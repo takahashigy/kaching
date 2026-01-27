@@ -4,13 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Mic, Volume2, Trophy, Calendar, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const MOCK_LEADERBOARD = [
-  { id: 1, avatar: '🦁', nickname: '狮吼王', todayScore: 98, historyScore: 105 },
-  { id: 2, avatar: '🐯', nickname: '虎啸山林', todayScore: 95, historyScore: 102 },
-  { id: 3, avatar: '🦅', nickname: '鹰击长空', todayScore: 92, historyScore: 98 },
-  { id: 4, avatar: '🐉', nickname: '龙吟九天', todayScore: 88, historyScore: 95 },
-  { id: 5, avatar: '🐺', nickname: '狼嚎月夜', todayScore: 85, historyScore: 90 }
-];
+
 
 export default function ShoutMode() {
   const [isRecording, setIsRecording] = useState(false);
@@ -328,46 +322,10 @@ export default function ShoutMode() {
           </button>
         </div>
 
-        <div className="space-y-2">
-          {MOCK_LEADERBOARD.map((user, index) => (
-            <div
-              key={user.id}
-              className={cn(
-                "flex items-center gap-3 p-3 rounded-xl transition-all",
-                "bg-gray-800/50 border",
-                index === 0 ? "border-amber-500/50" :
-                index === 1 ? "border-gray-400/50" :
-                index === 2 ? "border-amber-700/50" :
-                "border-gray-700"
-              )}
-            >
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold",
-                index === 0 ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white" :
-                index === 1 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800" :
-                index === 2 ? "bg-gradient-to-br from-amber-600 to-amber-700 text-white" :
-                "bg-gray-700 text-gray-400"
-              )}>
-                {index + 1}
-              </div>
-
-              <div className="text-2xl">{user.avatar}</div>
-
-              <div className="flex-1">
-                <p className="font-medium text-sm">{user.nickname}</p>
-                <p className="text-gray-500 text-xs">
-                  {activeTab === 'today' ? '今日' : '历史'}: {activeTab === 'today' ? user.todayScore : user.historyScore} dB
-                </p>
-              </div>
-
-              <div className={cn(
-                "text-lg font-bold",
-                getDbColor(activeTab === 'today' ? user.todayScore : user.historyScore)
-              )}>
-                {activeTab === 'today' ? user.todayScore : user.historyScore}
-              </div>
-            </div>
-          ))}
+        <div className="text-center py-12 bg-gray-800/30 rounded-xl border border-gray-700">
+          <Trophy className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+          <p className="text-gray-400 text-sm">暂无排行数据</p>
+          <p className="text-gray-500 text-xs mt-1">成为第一个上榜的人吧</p>
         </div>
       </div>
     </div>
