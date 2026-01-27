@@ -74,7 +74,15 @@ export default function TokenCard({ token, rank, showRank = false }) {
 
         {/* Rank badge */}
         {showRank && (
-          <div className="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-lg z-10">
+          <div
+            className={cn(
+              "absolute -top-3 -left-3 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg z-10",
+              rank === 1 ? "bg-gradient-to-br from-amber-400 to-orange-500" :
+              rank === 2 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-gray-800" :
+              rank === 3 ? "bg-gradient-to-br from-amber-600 to-amber-700" :
+              "bg-gradient-to-br from-cyan-500 to-purple-600"
+            )}
+          >
             {rank}
           </div>
         )}
