@@ -19,7 +19,7 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50">
       <div className="bg-[#0a0e27]/95 backdrop-blur-xl border-t border-gray-800/50">
-        <div className="max-w-md mx-auto flex justify-around items-center h-16 px-2">
+        <div className="max-w-md md:max-w-2xl mx-auto flex justify-around items-center h-16 md:h-20 px-2 md:gap-8">
           {navItems.map(({ name, icon: Icon, label, color }) => {
             const isActive = currentPath === name || (currentPath === '' && name === 'Lobby');
             return (
@@ -27,17 +27,17 @@ export default function BottomNav() {
                 key={name}
                 to={createPageUrl(name)}
                 className={cn(
-                  "flex flex-col items-center justify-center w-16 h-14 rounded-xl transition-all",
+                  "flex flex-col items-center justify-center w-16 md:w-20 h-14 md:h-16 rounded-xl transition-all",
                   isActive 
                     ? "text-white" 
                     : "text-gray-500 hover:text-gray-300"
                 )}
               >
                 <Icon className={cn(
-                  "w-6 h-6 mb-0.5 stroke-[1.5]",
+                  "w-6 h-6 md:w-7 md:h-7 mb-0.5 stroke-[1.5]",
                   isActive && (color || "text-cyan-400")
                 )} />
-                <span className="text-[10px] font-medium">{label}</span>
+                <span className="text-[10px] md:text-xs font-medium">{label}</span>
               </Link>
             );
           })}
