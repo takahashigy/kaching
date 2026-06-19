@@ -1,0 +1,9 @@
+{
+  "name": "Kaching (\u6a21\u97f3)",
+  "site": {
+    "installCommand": "npm install",
+    "buildCommand": "npm run build",
+    "serveCommand": "npm run dev",
+    "outputDirectory": "./dist"
+  }
+}
