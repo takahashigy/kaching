@@ -1,0 +1,17 @@
+{
+  "name": "Watchlist",
+  "type": "object",
+  "properties": {
+    "tokenId": {
+      "type": "string",
+      "description": "Reference to token"
+    },
+    "userId": {
+      "type": "string",
+      "description": "User identifier"
+    }
+  },
+  "required": [
+    "tokenId"
+  ]
+}

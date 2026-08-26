@@ -1,0 +1,82 @@
+{
+  "name": "Token",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Token name"
+    },
+    "ticker": {
+      "type": "string",
+      "description": "Token ticker symbol"
+    },
+    "marketCap": {
+      "type": "number",
+      "description": "Market cap in USD"
+    },
+    "liquidityUSD": {
+      "type": "number",
+      "description": "Liquidity in USD"
+    },
+    "volume4m": {
+      "type": "number",
+      "description": "4-minute volume"
+    },
+    "swaps4m": {
+      "type": "number",
+      "description": "4-minute swap count"
+    },
+    "holders": {
+      "type": "number",
+      "description": "Number of holders"
+    },
+    "listeners": {
+      "type": "number",
+      "description": "Current listeners in room"
+    },
+    "joinVelocity": {
+      "type": "number",
+      "description": "Rate of new joins"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "INACTIVE",
+        "ACTIVE",
+        "FROZEN"
+      ],
+      "default": "INACTIVE"
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "BLUE",
+        "PURPLE",
+        "GOLD"
+      ],
+      "default": "BLUE"
+    },
+    "speakersCount": {
+      "type": "number",
+      "default": 0
+    },
+    "popularityScore": {
+      "type": "number",
+      "default": 0
+    },
+    "freezeReason": {
+      "type": "string"
+    },
+    "sustainedMinutes": {
+      "type": "number",
+      "default": 0
+    },
+    "imageUrl": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "ticker"
+  ]
+}

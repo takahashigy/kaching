@@ -1,0 +1,31 @@
+{
+  "name": "ShoutScore",
+  "type": "object",
+  "properties": {
+    "userId": {
+      "type": "string",
+      "description": "\u7528\u6237ID\uff08\u90ae\u7bb1\uff09"
+    },
+    "score": {
+      "type": "number",
+      "description": "\u5206\u8d1d\u6570"
+    },
+    "isValid": {
+      "type": "boolean",
+      "description": "\u662f\u5426\u6709\u6548\uff08\u8d85\u8fc7110dB\u4e3a\u65e0\u6548\uff09",
+      "default": true
+    },
+    "avatar": {
+      "type": "string",
+      "description": "\u7528\u6237\u5934\u50cfemoji"
+    },
+    "nickname": {
+      "type": "string",
+      "description": "\u7528\u6237\u6635\u79f0"
+    }
+  },
+  "required": [
+    "userId",
+    "score"
+  ]
+}
